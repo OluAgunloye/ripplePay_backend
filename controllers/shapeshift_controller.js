@@ -3,7 +3,7 @@ let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
 const User = require('../models/user');
 const { ShapeShiftTransaction } = require('../models/shapeShiftTransaction');
-const { findFromAndUpdateCache, getFromTheCache, setInCache } = require('../models/redis');
+const Redis = require('../models/redis');
 // from e.g. would be 'from 50 XRP'
 // to e.g. would be 'to 1 BTC'
 // shapeshiftAddress should be URI encoded if its a Ripple address
@@ -21,29 +21,31 @@ exports.createShapeshiftTransaction = asynchronous (function(req, res, next) {
     orderId,
     date: new Date()
   };
+  
   let shapeShiftTransaction = new ShapeShiftTransaction(shapeshift);
   shapeShiftTransaction.save(function(err) {
     if (err) { return next(err); }
   })
-  findFromAndUpdateCache(`${userId}: shapeshift-transactions`, (val) => val.push(shapeshift));
+  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.push(shapeshift));
   return res.json({});
 })
 
 exports.getShapeshiftTransactions = asynchronous (function(req, res, next) {
   let existingUser = req.user;
   let userId = existingUser._id;
-  let cacheVal = await (getFromTheCache(`${userId}: shapeshift-transactions`));
+  let cacheVal = await (Redis.getFromTheCache("shapeshift-transactions", userId));
   if (cacheVal) {
     return res.json({shapeshiftTransactions: cacheVal});
   }
   const shapeshiftTransactions = await (ShapeShiftTransaction.find({ userId }));
-  setInCache(`${userId}: shapeshift-transactions`, shapeshiftTransactions);
+  Redis.setInCache("shapeshift-transactions", userId, shapeshiftTransactions);
   res.json({ shapeshiftTransactions });
 })
 
 exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   const existingUser = req.user;
   const userId = existingUser._id;
+
   let query = req.query;
   let shapeShiftAddress = query['0'];
   let date = query['1'];
@@ -56,11 +58,11 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   // if i don't have txnId for this shapeshift transaction, I will go to ripple ledger to find it.
   let toAddress = shapeShiftAddress.match(/\w+/)[0];
   let destTag = parseInt(shapeShiftAddress.match(/\?dt=(\d+)/)[1]);
-  let Rippled = require('./rippleAPI');
-  let server = new Rippled();
-  await (server.connect());
-  let txnInfo = await (server.api.getTransactions(fromAddress, { excludeFailures: true, types: ["payment"] }));
-  const manipulateTransactions = function(currTxn) {
+
+  let Ripple = require('../services/rippleAPI');
+  let txnInfo = await (Ripple.getSuccessfulTransactions(fromAddress));
+
+  const processTransaction = function(currTxn) {
     if(toAddress === currTxn.specification.destination.address && destTag === currTxn.specification.destination.tag) {
       return currTxn.id;
     }
@@ -69,9 +71,10 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
     }
     return false;
   };
+
   let txnId;
   async.mapSeries(txnInfo, function (currTxn, cb) {
-    txnId = manipulateTransactions(currTxn);
+    txnId = processTransaction(currTxn);
     if (txnId === null){
       cb(true);
     }
