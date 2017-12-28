@@ -1,7 +1,7 @@
 const jwt = require('jwt-simple');
 
 let secret;
-if (process.env.NODE_ENV == 'production') {
+if (process.env.NODE_ENV=='production') {
     secret = process.env.Secret;
 } else {
     secret = require('../config').secret;

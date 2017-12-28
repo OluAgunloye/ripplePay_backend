@@ -49,13 +49,13 @@ server.connect().then(()=>{
         address: adds[n],
         secret: addresses[adds[n]],
         balance: info[0].value
-      }
+      };
       let myCashRegister = new Register(addon);
       myCashRegister.save(function (err) {
         if (err) { console.log('did not work'); }
         return recurse(n + 1);
       });
-    })
+    });
   }
   recurse();
   let x = Object.keys(bank);
@@ -64,14 +64,14 @@ server.connect().then(()=>{
       address: x[0],
       secret: bank[x[0]],
       balance: info[0].value
-    }
+    };
     let Vault = Bank;
     let myVault = new Vault(savebank);
     myVault.save(function (err) {
       if (err) { console.log('did not work'); }
     });
-  })
-})
+  });
+});
 
 let cash = new Money;
 cash.save(function(err){
