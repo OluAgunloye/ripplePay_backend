@@ -1,0 +1,48 @@
+{
+  "name": "auth-server-boilerplate",
+  "version": "1.0.0",
+  "description": "auth backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "ripplePay Systems Incorporated",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.5.0",
+    "asyncawait": "^1.0.6",
+    "axios": "^0.16.2",
+    "bcrypt-nodejs": "0.0.3",
+    "bluebird": "^3.5.1",
+    "body-parser": "^1.18.2",
+    "client-sessions": "^0.8.0",
+    "cookie-parser": "^1.4.3",
+    "cookie-session": "^2.0.0-beta.3",
+    "csurf": "^1.9.0",
+    "express": "^4.16.2",
+    "express-mung": "^0.4.6",
+    "helmet": "^3.9.0",
+    "jwt-simple": "^0.5.0",
+    "koa-ratelimit": "^4.0.0",
+    "limiter": "^1.1.2",
+    "link": "^0.1.5",
+    "mongoose": "^4.13.0",
+    "morgan": "^1.9.0",
+    "nodemon": "^1.12.1",
+    "passport": "^0.3.2",
+    "passport-jwt": "^2.1.0",
+    "passport-local": "^1.0.0",
+    "promise-map-series": "^0.2.3",
+    "react-native-keychain": "^2.0.0-rc",
+    "redis": "^2.8.0",
+    "ripple-lib": "^0.17.7",
+    "uuid": "^2.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jonchaney/ripple-pay.git"
+  },
+  "engines": {
+    "node": "6.10.1"
+  }
+}
