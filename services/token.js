@@ -11,7 +11,7 @@ if (process.env.NODE_ENV == 'production') {
 // EXPIRE_TIME = 5 * 60 * 1000 // 5 minutes
 
 // use the following expire time while debugging / on local machine
-EXPIRE_TIME = 100000000
+const EXPIRE_TIME = 100000000;
 
 exports.tokenForUser = function (user) {
     let timeStamp = new Date().getTime();
