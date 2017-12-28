@@ -1,4 +1,3 @@
-// const bank = require('../models/vault');
 const User = require('../models/user');
 const {CashRegister} = require('../models/populateBank');
 const {Bank} = require('../models/populateBank');

@@ -3,7 +3,6 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
-const { addresses, bank } = require('../controllers/addresses');
 const async = require('async');
 //UNCOMMENT THIS WHEN TRYING TO POPULATE THE BANK
 // mongoose.Promise = global.Promise;

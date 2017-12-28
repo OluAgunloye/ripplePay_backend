@@ -1,6 +1,5 @@
 // API to interact with Rippled Server
 const { RippleAPI } = require('ripple-lib');
-const { addresses, bank } = require('../controllers/addresses');
 
 class Rippled {
   constructor(){
