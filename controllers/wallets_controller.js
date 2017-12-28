@@ -4,7 +4,16 @@ const { findFromAndUpdateCache, getFromTheCache, setInCache } = require('../mode
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
-const {addresses, bank} = require('./addresses');
+
+let addresses, bank;
+
+if (process.env.NODE_ENV == 'production') {
+  addresses = JSON.parse(process.env.REGISTERS);
+  bank = JSON.parse(process.env.BANK);
+} else {
+  addresses = require('./addresses').addresses;
+  bank = require('./addresses').bank;
+}
 
 //Since there is a very low chance of a coincide, this shouldn't have to recurse at all
 //or more than once ever.
