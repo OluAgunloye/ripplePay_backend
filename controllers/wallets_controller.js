@@ -10,6 +10,7 @@ let addresses, bank;
 if (process.env.NODE_ENV == 'production') {
   addresses = JSON.parse(process.env.REGISTERS);
   bank = JSON.parse(process.env.BANK);
+  console.log(addresses, bank);
 } else {
   addresses = require('./addresses').addresses;
   bank = require('./addresses').bank;
