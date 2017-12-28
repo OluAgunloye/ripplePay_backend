@@ -1,12 +1,20 @@
 // API to interact with Rippled Server
 const { RippleAPI } = require('ripple-lib');
-const { addresses, bank } = require('../controllers/addresses');
 const BanksController = require('../controllers/banks_controller');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 const bcrypt = require('bcrypt-nodejs');
 const Redis = require('../models/redis');
 const { Bank, CashRegister, Money } = require('../models/populateBank');
+
+let addresses, bank;
+if (process.env.NODE_ENV == 'production') {
+  addresses = JSON.parse(process.env.REGISTERS);
+  bank = JSON.parse(process.env.BANK);
+} else {
+  addresses = require('./addresses').addresses;
+  bank = require('./addresses').bank;
+}
 
 exports.connect = async(function() {
   const api = new RippleAPI({

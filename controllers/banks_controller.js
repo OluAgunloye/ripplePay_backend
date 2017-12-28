@@ -6,8 +6,8 @@ const Redis = require('../models/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
-let addresses, bank;
 
+let addresses, bank;
 if (process.env.NODE_ENV=='production') {
   addresses = JSON.parse(process.env.REGISTERS);
   bank = JSON.parse(process.env.BANK);
