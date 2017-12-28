@@ -10,7 +10,7 @@ exports.signin = function(req, res) {
   });
 };
 
-exports.comparePassword = function(req, res) {
+exports.comparePassword = function(req, res, next) {
   const user = req.user;
   const { password } = req.body;
   user.comparePassword(password, function (error, isMatch) {
