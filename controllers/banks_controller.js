@@ -85,7 +85,6 @@ exports.signAndSend = asynchronous (function(req, res, next){
 
   let sendMoney = asynchronous (function(){
     const registerSecret = addresses[registerAddress];
-    console.log(registerSecret);
     const result = await(Ripple.signAndSend(registerAddress, registerSecret, userId));
     if (result) {
       console.log(result);
