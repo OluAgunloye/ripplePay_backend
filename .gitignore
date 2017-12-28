@@ -1,5 +1,5 @@
 node_modules/
-controllers/addresses.js
+# controllers/addresses.js
 controllers/ripplePay.pem
 ripplePay.pem
 
