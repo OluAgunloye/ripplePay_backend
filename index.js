@@ -1,12 +1,15 @@
-//This is where everything begins when the server nodemon is started up. All the routes have v1 for this reason.
+// require express
 const express = require('express');
+var app = express();
+// require middleware
 const mung = require('express-mung');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
 const helmet = require('helmet');
+// require db
+const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
-var app = express();
+// setup redis
 var redis = require("redis");
 let bluebird = require('bluebird');
 bluebird.promisifyAll(redis.RedisClient.prototype);
@@ -18,9 +21,6 @@ global.RedisCache = client;
 
 var router = require('./services/router');
 const { tokenForUser } = require('./services/token');
-// RedisCache.end(true);
-// if you'd like to select database 3, instead of 0 (default), call
-// client.select(3, function() { /* ... */ });
 
 if (process.env.NODE_ENV=='production') {
   mongoose.connect(process.env.MONGO_URL);

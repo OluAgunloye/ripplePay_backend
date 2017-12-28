@@ -24,7 +24,9 @@ router.route('/authUrl')
 router.route('/banksend')
   .post(requireAuth, BankController.inBankSend);
 router.route('/send')
-  .post(requireAuth, BankController.sendMoney);
+  .post(requireAuth, BankController.signAndSend);
+router.route('/payment')
+  .post(requireAuth, BankController.preparePayment);
 router.route('/search')
   .get(requireAuth, AuthenticationController.search);
 router.route('/transactions')
