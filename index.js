@@ -17,9 +17,9 @@ bluebird.promisifyAll(redis.RedisClient.prototype);
 let client;
 
 if (process.env.NODE_ENV=='production') {
-  client = redis.createClient(); 
-} else {
   client = redis.createClient(process.env.REDISCLOUD_URL);
+} else {
+  client = redis.createClient(); 
 }
 
 client.on("error", function (err) {
