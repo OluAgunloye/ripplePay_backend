@@ -2,7 +2,7 @@ const User = require('../models/user');
 const {CashRegister} = require('../models/populateBank');
 const {Bank} = require('../models/populateBank');
 const {Money} = require('../models/populateBank');
-const { findFromAndUpdateCache, getFromTheCache, setInCache } = require('../models/redis');
+const Redis = require('../models/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
@@ -16,7 +16,7 @@ if (process.env.NODE_ENV=='production') {
   bank = require('./addresses').bank;
 }
 
-const bcrypt = require('bcrypt-nodejs');
+exports.BANK_NAME = "ripplePay";
 
 exports.inBankSend = asynchronous(function(req, res, next){
   let {receiverScreenName, amount} = req.body;
@@ -46,8 +46,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
       amount: amount,
       otherParty: sender.screenName
     };
-    await (User.update({_id: sender_id}, {$set: senderBal, $push: {transactions: senderTransaction}}));
-    await (User.findOneAndUpdate({ screenName: receiverScreenName }, {$set: receiverBal, $push: {transactions: receiverTransaction}}));
+    await (User.update({_id: sender_id}, {'$set': senderBal, '$push': {transactions: senderTransaction}}));
+    await (User.findOneAndUpdate({ screenName: receiverScreenName }, {'$set': receiverBal, '$push': {transactions: receiverTransaction}}));
     res.json({message: "Payment was Successful", balance: senderBal.balance});
   }
   else
@@ -56,97 +56,60 @@ exports.inBankSend = asynchronous(function(req, res, next){
   }
 })
 
-exports.sendMoney = asynchronous (function(req, res, next){
-  const Rippled = require('./rippleAPI');
-  let server = new Rippled();
+exports.preparePayment = asynchronous(function(req, res, next) {
+  const Ripple = require('../services/rippleAPI');
   let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
   let existingUser = req.user;
   let userId = existingUser._id;
-  let bankAddress = Object.keys(bank)[0];
-  if ( amount > existingUser.balance )
-  {
-     res.json({message: "Balance Insufficient"});
-     return;
+  if (amount > existingUser.balance) {
+    res.json({ message: "Balance Insufficient" });
+    return;
   }
-  await (server.connect());
-  const myPayment = server.thePayment(fromAddress, toAddress, toDesTag, sourceTag, amount);
-  console.log(myPayment);
-  let balInfo = await (server.api.getBalances(fromAddress));
-  let registerSecret = await (RedisCache.getAsync(fromAddress));
-  if (!registerSecret) {
-    let register = await (CashRegister.findOne({address: fromAddress}));
-    registerSecret = register.secret;
-    RedisCache.set(fromAddress, registerSecret);
-  }
-  let sendMyMoney = asynchronous (function(){
-    bcrypt.compare(addresses[fromAddress], registerSecret, asynchronous (function(err, theResponse){
-      if (err) { return next(err)}
-      // FOR SHAPESHIFT, WILL NEED TO RETURN THE TXNID WHEN A SUCCESSFUL TRANSACTION OCCURS
-      // IMP: MUST REMOVE THE TRY AND CATCH IF YOU WANT TO SEE THE ERRORS WHILE DEBUGGING
-      if ( theResponse )
-      {
-        try {
-          let orderinfo = await (server.api.preparePayment(fromAddress, myPayment));
-          let theFee = orderinfo.instructions.fee;
-          await (server.api.disconnect());
-          let jstring = server.api.sign(orderinfo.txJSON, addresses[fromAddress]);
-          let signedTransact = jstring.signedTransaction;
-          await (server.connect());
-          let numberFee = parseFloat(theFee);
-          await (Money.update({}, {$inc: { cost: numberFee, revenue: 0.02 + numberFee, profit: 0.02 }}));
-          let result = await (server.api.submit(signedTransact));
-          console.log(result);
-          res.json({message: result.resultCode});
-        }
-        catch (err){
-          console.log(err);
-          res.json({message: "Error In submitting transaction"});
-        }
-      }
-      else
-      {
-        res.json({message: "Someone's Trying to Get into Your Wallet"});
-      }
-    }))
+  const txnInfo = await(Ripple.getTransactionInfo(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
+  const fee = txnInfo.instructions.fee;
+  res.json({
+    fee: txnInfo.instructions.fee
+  });
+})
+
+exports.signAndSend = asynchronous (function(req, res, next){
+  const Ripple = require('../services/rippleAPI');
+  const { fromAddress, amount } = req.body;
+
+  const existingUser = req.user;
+  const userId = existingUser._id;
+  const bankAddress = Object.keys(bank)[0];
+
+  const registerAddress = fromAddress;
+  const registerBalance = await(Ripple.getBalance(registerAddress));
+
+  let sendMoney = asynchronous (function(){
+    const registerSecret = addresses[registerAddress];
+    const result = await(Ripple.signAndSend(registerAddress, registerSecret, userId));
+    if (result) {
+      console.log(result);
+      res.json({message: result.resultCode});
+    }
+    else {
+      res.json({message: "Transaction Failed"});
+    }
   })
 
   let refillCashRegisterAndSend = asynchronous(function(){
-    let bankSecret = await (RedisCache.getAsync(bankAddress));
-    if (!bankSecret) {
-      let theBank = await (Bank.findOne({address: bankAddress}));
-      bankSecret = theBank.secret;
-      RedisCache.set(bankAddress, bankSecret);
-    }
-    let thePay = server.thePayment(bankAddress, fromAddress, null, 0, 30)
-    console.log(thePay);
-    try {
-      bcrypt.compare(bank[bankAddress], bankSecret, asynchronous (function(err, respondent){
-        if ( respondent )
-        {
-          let theOrderInfo = await (server.api.preparePayment(bankAddress, thePay));
-          await (server.api.disconnect());
-          let theJstring = server.api.sign(theOrderInfo.txJSON, bank[bankAddress]);
-          let theSignedTransact = theJstring.signedTransaction;
-          await (server.connect());
-          let resultance = await (server.api.submit(theSignedTransact));
-          console.log(resultance);
-          sendMyMoney();
-        }
-      }))
-    }
-    catch (err){
-      console.log(err);
-    }
+    const bankSecret = bank[bankAddress]; 
+    // refilling by 20 for now until we find a better wallet refill algorithm
+    const txnInfo = await(Ripple.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
+    const result = await(Ripple.signAndSend(bankAddress, bankSecret, exports.BANK_NAME, txnInfo));
+    console.log(result);
+    sendMoney();
   })
-    // Done to check if the address has a minimum of 20 ripple in it. All addresses of ours should abide
-    // This may be inconsistent when you are working now because you added trustlines.
-  if ( parseFloat(balInfo[0].value) - amount < 20 )
-  {
+
+  const amountToSend = amount;
+
+  if ( registerBalance - amountToSend < 20 ) {
     refillCashRegisterAndSend();
-  }
-  else
-  {
-    sendMyMoney();
+  } else {
+    sendMoney();
   }
 })
 
@@ -155,39 +118,38 @@ exports.sendMoney = asynchronous (function(req, res, next){
 // Last Transaction ID is reset to the first transaction ID that matches
 // A user's address and destination tag
 exports.getTransactions = asynchronous(function (req, res, next) {
-  const Rippled = require('./rippleAPI');
-  let server = new Rippled();
-  let existingUser = req.user;
-  let userId = existingUser._id;
+  const Ripple = require('../services/rippleAPI');
+  const existingUser = req.user;
+  const userId = existingUser._id;
   if (existingUser.cashRegister)
   {
-    await (server.connect());
-    let newbalance;
-    let info = await (server.api.getBalances(existingUser.cashRegister));
-    newbalance = info[0].value;
-    await (CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: newbalance }, {upsert: false}));
-    let txnInfo = await (server.api.getTransactions(existingUser.cashRegister, { excludeFailures: true, types: ["payment"] }));
-    let userAddress = existingUser.cashRegister;
+    const registerBalance = await (Ripple.getBalance(existingUser.cashRegister));
+    await (CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: registerBalance }, {upsert: false}));
+    const transactions = await (Ripple.getSuccessfulTransactions(existingUser.cashRegister));
     // console.log(txnInfo);
-    let changedUser = {
+    let userObject = {
       _id: existingUser._id,
       balance: existingUser.balance,
       transactions: existingUser.transactions,
       lastTransactionId: null
     };
 
-    let allWallets = existingUser.wallets;
+    let userWallets = existingUser.wallets;
+    const userAddress = existingUser.cashRegister;
 
-    const manipulateTransactions = function(currTxn, setLastTransBool, stopIterBool) {
-      if(allWallets.includes(currTxn.specification.destination.tag) || allWallets.includes(currTxn.specification.source.tag)) {
-        if ( setLastTransBool )
+    const processTransaction = function(currTxn, setLastTransaction, stopIteration) {
+      if(
+        userWallets.includes(currTxn.specification.destination.tag) || 
+        userWallets.includes(currTxn.specification.source.tag)
+      ) {
+        if ( setLastTransaction )
         {
-          changedUser.lastTransactionId = currTxn.id;
-          setLastTransBool = false;
+          userObject.lastTransactionId = currTxn.id;
+          setLastTransaction = false;
         }
         if (currTxn.id === existingUser.lastTransactionId) {
-          stopIterBool = true;
-          return [setLastTransBool, stopIterBool];
+          stopIteration = true;
+          return [setLastTransaction, stopIteration];
         }
           let counterParty;
           //This only has to look at 2 keys, so It is ok that it is using forEach. It won't be that blocking.
@@ -197,29 +159,30 @@ exports.getTransactions = asynchronous(function (req, res, next) {
               return;
             }
           });
-          let balanceChange = parseFloat(currTxn.outcome.balanceChanges[userAddress][0].value.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0]);
+          const balance = currTxn.outcome.balanceChanges[userAddress][0].value;
+          let balanceChange = parseFloat(balance.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0]);
           if ( balanceChange < 0 )
           {
             balanceChange -= 0.02;
           }
-          changedUser.balance += balanceChange;
+          userObject.balance += balanceChange;
           let newTxn = {
             date: new Date(currTxn.outcome.timestamp),
             amount: balanceChange,
             txnId: currTxn.id,
             otherParty: counterParty
           };
-          changedUser.transactions.unshift(newTxn);
+          userObject.transactions.unshift(newTxn);
       }
-      return [setLastTransBool, stopIterBool];
+      return [setLastTransaction, stopIteration];
     };
     // map over transactions asynchronously
-    let setLastTransBool = true;
-    let stopIterBool = false;
+    let setLastTransaction = true;
+    let stopIteration = false;
     // Stop at a user's last transaction ID and reset the last TID.
-    async.mapSeries(txnInfo, function (currTxn, cb) {
-      [setLastTransBool, stopIterBool] = manipulateTransactions(currTxn, setLastTransBool, stopIterBool);
-      if ( !stopIterBool )
+    async.mapSeries(transactions, function (currTxn, cb) {
+      [setLastTransaction, stopIteration] = processTransaction(currTxn, setLastTransaction, stopIteration);
+      if ( !stopIteration )
       {
         cb(null, currTxn);
       }
@@ -228,11 +191,11 @@ exports.getTransactions = asynchronous(function (req, res, next) {
       }
     }, function(error, resp) {
       //SORTING INSIDE OF THE SERVER IS BLOCKING INSTEAD THE SORTING IS DONE IN HOME.JS CLIENT-SIDE
-      User.update({_id: existingUser._id}, changedUser, function (err) {
+      User.update({_id: existingUser._id}, userObject, function (err) {
         if (err) { return next(err); }
         res.json({
-          transactions: changedUser.transactions,
-          balance: changedUser.balance
+          transactions: userObject.transactions,
+          balance: userObject.balance
         });
       });
     });
