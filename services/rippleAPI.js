@@ -6,15 +6,6 @@ let await = require('asyncawait/await');
 const Redis = require('../models/redis');
 const { Bank, CashRegister, Money } = require('../models/populateBank');
 
-let addresses, bank;
-if (process.env.NODE_ENV == 'production') {
-  addresses = JSON.parse(process.env.REGISTERS);
-  bank = JSON.parse(process.env.BANK);
-} else {
-  addresses = require('./addresses').addresses;
-  bank = require('./addresses').bank;
-}
-
 const RippledServer = async(function() {
   this.api = new RippleAPI({
     server: 'wss://s2.ripple.com/' // Public rippled server hosted by Ripple, Inc.

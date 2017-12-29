@@ -8,7 +8,7 @@ let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
-const RippledServer = require('../ services / rippleAPI');
+const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 
 let encryptedAddresses, encryptedBank;
