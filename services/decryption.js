@@ -37,7 +37,7 @@ exports.getMasterKey = async(function() {
 
 exports.decrypt = function(masterKey, encryptedHex) {
     const encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
+    const aesCtr = new aesjs.ModeOfOperation.ctr(masterKey, new aesjs.Counter(5));
     const decryptedBytes = aesCtr.decrypt(encryptedBytes);
     const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
     return decryptedText;
