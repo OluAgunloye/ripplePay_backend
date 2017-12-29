@@ -3,7 +3,6 @@ const { RippleAPI } = require('ripple-lib');
 const BanksController = require('../controllers/banks_controller');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
-const bcrypt = require('bcrypt-nodejs');
 const Redis = require('../models/redis');
 const { Bank, CashRegister, Money } = require('../models/populateBank');
 
@@ -85,48 +84,27 @@ function senderIsUser(id) {
 }
 
 exports.signAndSend = async(function(address, secret, userId, txnInfo) {
-  let secretHash = await(RedisCache.getAsync(address));
-
-  if (!secretHash) {
-    let source;
-
-    if (senderIsUser(userId)) {
-     source = await(CashRegister.findOne({ address }));   
-    } else {
-      source = await(Bank.findOne({ address }));
+  if (senderIsUser(userId) && !txnInfo) {
+    txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
+    if (!txnInfo) {
+      return null;
     }
+  }
+  console.log(txnInfo);
 
-    secretHash = source.secret;
-    RedisCache.set(address, secretHash);
+  const fee = parseFloat(txnInfo.instructions.fee);
+  const signature = api.sign(txnInfo.txJSON, secret);
+  const txnBlob = signature.signedTransaction;
+
+  if (senderIsUser(userId)) {
+    await(Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }));  
+  } else {
+    await(Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } })); 
   }
 
-  const response = bcrypt.compareSync(secret, secretHash);
-
-  if (response) {
-
-    if (senderIsUser(userId) && !txnInfo) {
-      txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
-      if (!txnInfo) {
-        return null;
-      }
-    }
-    console.log(txnInfo);
-
-    const fee = parseFloat(txnInfo.instructions.fee);
-    const signature = api.sign(txnInfo.txJSON, secret);
-    const txnBlob = signature.signedTransaction;
-
-    if (senderIsUser(userId)) {
-      await(Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }));  
-    } else {
-      await(Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } })); 
-    }
-
-    const result = await(api.submit(txnBlob));
-    await (Redis.removeFromCache("prepared-transaction", userId));
-    return result;
-  }
-  return null;
+  const result = await(api.submit(txnBlob));
+  await (Redis.removeFromCache("prepared-transaction", userId));
+  return result;
 });
 
 const api = await(exports.connect());
