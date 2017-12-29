@@ -60,6 +60,7 @@ exports.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, val
 };
 
 exports.getBalance = async(function(address) {
+  const api = await (exports.connect());
   const balInfo = await (api.getBalances(address));
   return balInfo[0] ? parseFloat(balInfo[0].value) : 0;
 });
@@ -70,6 +71,8 @@ exports.getSuccessfulTransactions = async(function(address) {
 });
 
 exports.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
+  const api = await(exports.connect());
+  
   const paymentObject = exports.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
   const txnInfo = await(api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 1000 }));
 
@@ -84,6 +87,8 @@ function senderIsUser(id) {
 }
 
 exports.signAndSend = async(function(address, secret, userId, txnInfo) {
+  const api = await(exports.connect());
+
   if (senderIsUser(userId) && !txnInfo) {
     txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
     if (!txnInfo) {
@@ -106,5 +111,3 @@ exports.signAndSend = async(function(address, secret, userId, txnInfo) {
   await (Redis.removeFromCache("prepared-transaction", userId));
   return result;
 });
-
-const api = await(exports.connect());
