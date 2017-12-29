@@ -7,12 +7,13 @@ let await = require('asyncawait/await');
 
 exports.getMasterKey = async(function() {
     let password, salt, hash, bank, addresses, mongoBank;
-    if (process.env.NODE_ENV == 'production') {
+    if (process.env.NODE_ENV=='production') {
         password = process.env.PASSWORD;
-        mongoBank = await (Money.findOne({}));
+        mongoBank = await (Money.findOne());
         salt = mongoBank.salt;
         hash = await (Redis.getFromTheCache("secret-hash", "admin"));
         if (!hash) {
+            // put the following in a different file and gitignore from github but not from heroku
             hash = pbkdf2.pbkdf2Sync(password, salt, 10, 32, 'sha512').toString('hex');
             await (Redis.setInCache("secret-hash", "admin", hash));
         }
