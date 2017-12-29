@@ -9,6 +9,7 @@
   "author": "ripplePay Systems Incorporated",
   "license": "ISC",
   "dependencies": {
+    "aes-js": "^3.1.0",
     "async": "^2.5.0",
     "asyncawait": "^1.0.6",
     "axios": "^0.16.2",
@@ -32,6 +33,7 @@
     "passport": "^0.3.2",
     "passport-jwt": "^2.1.0",
     "passport-local": "^1.0.0",
+    "pbkdf2": "^3.0.14",
     "promise-map-series": "^0.2.3",
     "react-native-keychain": "^2.0.0-rc",
     "redis": "^2.8.0",
