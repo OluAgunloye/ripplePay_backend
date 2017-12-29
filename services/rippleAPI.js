@@ -66,13 +66,14 @@ exports.getBalance = async(function(address) {
 });
 
 exports.getSuccessfulTransactions = async(function(address) {
+  const api = await (exports.connect());
   const successfulTransactions = await(api.getTransactions(address, { excludeFailures: true, types: ["payment"]}));
   return successfulTransactions;
 });
 
 exports.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
   const api = await(exports.connect());
-  
+
   const paymentObject = exports.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
   const txnInfo = await(api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 1000 }));
 
