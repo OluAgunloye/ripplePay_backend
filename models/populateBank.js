@@ -54,9 +54,12 @@ let usedWalletSchema = new Schema ({
   wallet: {
     type: String
   }
-})
+});
 
 let moneySchema = new Schema ({
+  salt: {
+    type: String
+  },
   cost: {
     type: Number,
     default: 0
@@ -69,7 +72,7 @@ let moneySchema = new Schema ({
     type: Number,
     default: 0
   }
-})
+});
 
 vault.pre('save', function (next) {
   var register = this;

@@ -6,14 +6,17 @@ const Redis = require('../models/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
+const Encryption = require('../services/encryption');
+const Decryption = require('../services/decryption');
 
-let addresses, bank;
+
+let encryptedAddresses, encryptedBank;
 if (process.env.NODE_ENV=='production') {
-  addresses = JSON.parse(process.env.REGISTERS);
-  bank = JSON.parse(process.env.BANK);
+  encryptedAddresses = JSON.parse(process.env.REGISTERS);
+  encryptedBank = JSON.parse(process.env.BANK);
 } else {
-  addresses = require('./addresses').addresses;
-  bank = require('./addresses').bank;
+  encryptedAddresses = require('./addresses').encryptedAddresses;
+  encryptedBank = require('./addresses').encryptedBank;
 }
 
 exports.BANK_NAME = "ripplePay";
@@ -75,37 +78,48 @@ exports.preparePayment = asynchronous(function(req, res, next) {
 exports.signAndSend = asynchronous (function(req, res, next){
   const Ripple = require('../services/rippleAPI');
   const { fromAddress, amount } = req.body;
-
   const existingUser = req.user;
   const userId = existingUser._id;
-  const bankAddress = Object.keys(bank)[0];
 
   const registerAddress = fromAddress;
   const registerBalance = await(Ripple.getBalance(registerAddress));
 
+  const masterKey = await(Decryption.getMasterKey());
+  
   let sendMoney = asynchronous (function(){
-    const registerSecret = addresses[registerAddress];
-    const result = await(Ripple.signAndSend(registerAddress, registerSecret, userId));
-    if (result) {
-      console.log(result);
-      res.json({message: result.resultCode});
-    }
-    else {
-      res.json({message: "Transaction Failed"});
-    }
+
+      const encryptedRegisterAddress = Encryption.encrypt(masterKey, registerAddress);
+      const encryptedRegisterSecret = encryptedAddresses[encryptedRegisterAddress];
+      const registerSecret = Decryption.decrypt(masterKey, encryptedRegisterSecret);
+
+      const result = await(Ripple.signAndSend(registerAddress, registerSecret, userId));
+
+      if (result) {
+        console.log(result);
+        res.json({message: result.resultCode});
+      }
+      else {
+        res.json({message: "Transaction Failed"});
+      }
+
   })
 
   let refillCashRegisterAndSend = asynchronous(function(){
-    const bankSecret = bank[bankAddress]; 
-    // refilling by 20 for now until we find a better wallet refill algorithm
-    const txnInfo = await(Ripple.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
-    const result = await(Ripple.signAndSend(bankAddress, bankSecret, exports.BANK_NAME, txnInfo));
-    console.log(result);
-    sendMoney();
+
+      const encryptedBankAddress = Object.keys(encryptedBank)[0];
+      const encryptedBankSecret = encryptedBank[encryptedBankAddress];
+      const bankAddress = Decryption.decrypt(masterKey, encryptedBankAddress);
+      const bankSecret = Decryption.decrypt(masterKey, encryptedBankSecret);
+      
+      // refilling by 20 for now until we find a better wallet refill algorithm
+      const txnInfo = await(Ripple.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
+      const result = await(Ripple.signAndSend(bankAddress, bankSecret, exports.BANK_NAME, txnInfo));
+      console.log(result);
+      sendMoney();
+
   })
 
   const amountToSend = amount;
-
   if ( registerBalance - amountToSend < 20 ) {
     refillCashRegisterAndSend();
   } else {
@@ -208,3 +222,4 @@ exports.getTransactions = asynchronous(function (req, res, next) {
     });
   }
 })
+// 
