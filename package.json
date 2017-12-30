@@ -23,6 +23,7 @@
     "koa-ratelimit": "^4.0.0",
     "limiter": "^1.1.2",
     "link": "^0.1.5",
+    "lodash": "^4.17.4",
     "mongoose": "^4.13.0",
     "morgan": "^1.9.0",
     "nodemon": "^1.12.1",

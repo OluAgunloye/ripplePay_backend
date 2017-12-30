@@ -1,17 +1,17 @@
 const jwt = require('jwt-simple');
 
 let secret;
+let EXPIRE_TIME;
+
 if (process.env.NODE_ENV=='production') {
-    secret = process.env.Secret;
+    secret = process.env.SECRET;
+
+    EXPIRE_TIME = 180000;
 } else {
-    secret = require('../config').secret;
+    secret = require('../configs/config').SECRET;
+
+    EXPIRE_TIME = 100000000;
 }
-
-// Use the following expire time in production
-// EXPIRE_TIME = 5 * 60 * 1000 // 5 minutes
-
-// use the following expire time while debugging / on local machine
-const EXPIRE_TIME = 100000000;
 
 exports.tokenForUser = function (user) {
     let timeStamp = new Date().getTime();

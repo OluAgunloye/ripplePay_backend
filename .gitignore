@@ -1,10 +1,10 @@
 node_modules/
-controllers/addresses.js
 controllers/ripplePay.pem
 ripplePay.pem
 
 .DS_Store
 package-lock.json
-config.js
 
 dump.rdb
+
+configs/
