@@ -4,8 +4,8 @@ let await = require('asyncawait/await');
 const User = require('../models/user');
 const { ShapeShiftTransaction } = require('../models/shapeShiftTransaction');
 const Redis = require('../services/redis');
-const RippleServer = require('../services/rippleAPI');
-const rippleServer = new RippleServer();
+const RippledServer = require('../services/rippleAPI');
+const rippledServer = new RippledServer();
 // from e.g. would be 'from 50 XRP'
 // to e.g. would be 'to 1 BTC'
 // shapeshiftAddress should be URI encoded if its a Ripple address
@@ -62,7 +62,7 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   let destTag = parseInt(shapeShiftAddress.match(/\?dt=(\d+)/)[1]);
 
   
-  let txnInfo = await (rippleServer.getSuccessfulTransactions(fromAddress));
+  let txnInfo = await (rippledServer.getSuccessfulTransactions(fromAddress));
 
   const processTransaction = function(currTxn) {
     if(toAddress === currTxn.specification.destination.address && destTag === currTxn.specification.destination.tag) {
