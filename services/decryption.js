@@ -8,29 +8,43 @@ let await = require('asyncawait/await');
 exports.getMasterKey = async(function() {
     let keyOne, keyTwo, keyHash, mongoBank;
     if (process.env.NODE_ENV=='production') {
+
+        // Key 1 is in heroku
         keyOne = process.env.KEY_ONE;
+
+        // Key 2 is in mongo
         mongoBank = await (Money.findOne());
         keyTwo = mongoBank.KEY_TWO;
+
+        // hash(key1 + key2) is in redis
         keyHash = await (Redis.getFromTheCache("secret-hash", "admin"));
+
+        // if not in redis cache, hash the 2 keys and store in redis
         if (!keyHash) {
             keyHash = pbkdf2.pbkdf2Sync(keyOne, salt, 10, 32, 'sha512').toString('hex');
             await (Redis.setInCache("secret-hash", "admin", keyHash));
         }
-    } else {
+    } 
+    else {
+        // for local dev
         keyOne = require('../configs/config').KEY_ONE;
         keyTwo = require('../configs/config').KEY_TWO;
         keyHash = pbkdf2.pbkdf2Sync(keyOne, keyTwo, 10, 32, 'sha512').toString('hex');
     }
 
+    // AES algorithm to encrypt a concatenation of the 3 keys -> 64 bytes
     let bytes = aesjs.utils.hex.toBytes(keyOne + keyTwo + keyHash);
     let masterKey = [];
 
+    // convert to 32 bytes
     bytes.forEach((byte, i) => {
         if (i % 2 === 1) {
             masterKey.push(byte);
         }
     });
-    
+
+    // Final key required for encryption/decryption of encrypted address-secrets stored in heroku config vars
+    // A hacker must compromise heroku, redis, and mongo to receive masterKey
     return masterKey;
 });
 
