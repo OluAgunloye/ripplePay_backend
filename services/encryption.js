@@ -13,11 +13,13 @@ function encryptMyAddresses() {
     addresses = require('../controllers/addresses').addresses;
     bank = require('../controllers/addresses').bank;
 
-    let arr = aesjs.utils.hex.toBytes(password+salt+hash);
+    let bytes = aesjs.utils.hex.toBytes(password+salt+hash);
+    
     let masterKey = [];
-    arr.forEach((val, i) => {
+
+    bytes.forEach((byte, i) => {
         if (i % 2 === 1) {
-            masterKey.push(val);
+            masterKey.push(byte);
         }
     });
 

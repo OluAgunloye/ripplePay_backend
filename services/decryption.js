@@ -6,7 +6,7 @@ let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 
 exports.getMasterKey = async(function() {
-    let password, salt, hash, bank, addresses, mongoBank;
+    let password, salt, hash, mongoBank;
     if (process.env.NODE_ENV=='production') {
         password = process.env.PASSWORD;
         mongoBank = await (Money.findOne());
@@ -21,17 +21,17 @@ exports.getMasterKey = async(function() {
         password = require('../config').password;
         salt = require('../config').salt;
         hash = pbkdf2.pbkdf2Sync(password, salt, 10, 32, 'sha512').toString('hex');
-        addresses = require('../controllers/addresses').addresses;
-        bank = require('../controllers/addresses').bank;
     }
 
-    let arr = aesjs.utils.hex.toBytes(password + salt + hash);
+    let bytes = aesjs.utils.hex.toBytes(password + salt + hash);
     let masterKey = [];
-    arr.forEach((val, i) => {
+
+    bytes.forEach((byte, i) => {
         if (i % 2 === 1) {
-            masterKey.push(val);
+            masterKey.push(byte);
         }
     });
+    
     return masterKey;
 });
 
