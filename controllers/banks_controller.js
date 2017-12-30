@@ -9,6 +9,7 @@ let await = require('asyncawait/await');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
 const RippledServer = require('../services/rippleAPI');
+const rippledServer = new RippledServer();
 
 let encryptedAddresses, encryptedBank;
 if (process.env.NODE_ENV=='production') {
@@ -60,7 +61,6 @@ exports.inBankSend = asynchronous(function(req, res, next){
 })
 
 exports.preparePayment = asynchronous(function(req, res, next) {
-  const rippledServer = new RippledServer();
   let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
   let existingUser = req.user;
   let userId = existingUser._id;
@@ -76,7 +76,6 @@ exports.preparePayment = asynchronous(function(req, res, next) {
 })
 
 exports.signAndSend = asynchronous (function(req, res, next){
-  const rippledServer = new RippledServer();
   const { fromAddress, amount } = req.body;
   const existingUser = req.user;
   const userId = existingUser._id;
@@ -132,7 +131,6 @@ exports.signAndSend = asynchronous (function(req, res, next){
 // Last Transaction ID is reset to the first transaction ID that matches
 // A user's address and destination tag
 exports.getTransactions = asynchronous(function (req, res, next) {
-  const rippledServer = new RippledServer();
   const existingUser = req.user;
   const userId = existingUser._id;
   if (existingUser.cashRegister)
