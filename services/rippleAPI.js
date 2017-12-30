@@ -6,7 +6,7 @@ let await = require('asyncawait/await');
 const Redis = require('../models/redis');
 const { Bank, CashRegister, Money } = require('../models/populateBank');
 
-const RippledServer = async(function() {
+const RippledServer = function() {
   this.api = new RippleAPI({
     server: 'wss://s2.ripple.com/' // Public rippled server hosted by Ripple, Inc.
     //Need to change this to a private one later.
@@ -20,7 +20,7 @@ const RippledServer = async(function() {
   this.api.on('disconnected', (code) => {
     console.log('disconnected, code:', code);
   });
-})
+};
 
 RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, value){
   let source = {
