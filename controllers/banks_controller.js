@@ -1,11 +1,9 @@
-const User = require('../models/user');
-const {CashRegister} = require('../models/populateBank');
-const {Bank} = require('../models/populateBank');
-const {Money} = require('../models/populateBank');
-const Redis = require('../models/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
+const User = require('../models/user');
+const { CashRegister, BANK_NAME } = require('../models/moneyStorage');
+const Redis = require('../services/redis');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
 const RippledServer = require('../services/rippleAPI');
@@ -16,11 +14,9 @@ if (process.env.NODE_ENV=='production') {
   encryptedAddresses = JSON.parse(process.env.REGISTERS);
   encryptedBank = JSON.parse(process.env.BANK);
 } else {
-  encryptedAddresses = require('./addresses').encryptedAddresses;
-  encryptedBank = require('./addresses').encryptedBank;
+  encryptedAddresses = require('../configs/addresses').encryptedAddresses;
+  encryptedBank = require('../configs/addresses').encryptedBank;
 }
-
-exports.BANK_NAME = "ripplePay";
 
 exports.inBankSend = asynchronous(function(req, res, next){
   let {receiverScreenName, amount} = req.body;
@@ -112,7 +108,7 @@ exports.signAndSend = asynchronous (function(req, res, next){
       
       // refilling by 20 for now until we find a better wallet refill algorithm
       const txnInfo = await(rippledServer.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
-      const result = await(rippledServer.signAndSend(bankAddress, bankSecret, exports.BANK_NAME, txnInfo));
+      const result = await(rippledServer.signAndSend(bankAddress, bankSecret, BANK_NAME, txnInfo));
       console.log(result);
       sendMoney();
 

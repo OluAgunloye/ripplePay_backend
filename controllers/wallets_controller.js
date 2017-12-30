@@ -1,19 +1,12 @@
 const User = require('../models/user');
-const {UsedWallet} = require('../models/populateBank');
-const Redis = require('../models/redis');
+const { UsedWallet, CashRegister } = require('../models/moneyStorage');
+const Redis = require('../services/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
-
-let addresses, bank;
-
-if (process.env.NODE_ENV == 'production') {
-  addresses = JSON.parse(process.env.REGISTERS);
-  bank = JSON.parse(process.env.BANK);
-} else {
-  addresses = require('./addresses').addresses;
-  bank = require('./addresses').bank;
-}
+const RippledServer = require('../services/rippleAPI');
+let _ = require('lodash');
+const rippledServer = new RippledServer();
 
 //Since there is a very low chance of a coincide, this shouldn't have to recurse at all
 //or more than once ever.
@@ -22,11 +15,11 @@ exports.receiveOnlyDesTag = function(req, res, next){
   let {cashRegister} = req.body;
   let userId = req.user._id
   let newTag;
-  let findthis;
+  let searchString;
   let genTagRecursion = asynchronous (function(){
-      newTag = parseInt(Math.floor(Math.random()*4294967294));
-      findthis = `${cashRegister}${newTag}`;
-      let existingWallet = await (UsedWallet.findOne({wallet: findthis}));
+      newTag = _.random(1, 4294967294);
+      searchString = `${cashRegister}${newTag}`;
+      let existingWallet = await (UsedWallet.findOne({wallet: searchString}));
       if ( existingWallet )
       {
         // console.log("same address and dest tag not allowed");
@@ -34,7 +27,7 @@ exports.receiveOnlyDesTag = function(req, res, next){
       }
       else
       {
-        let theNewWallet = new UsedWallet({wallet: findthis});
+        let theNewWallet = new UsedWallet({wallet: searchString});
         await (theNewWallet.save());
         await (User.update({_id: userId}, {'$push': {wallets: newTag}}));
         Redis.findFromAndUpdateCache("redis-wallets", userId, (val) => val.push(newTag));
@@ -68,39 +61,25 @@ exports.findOldAddress = asynchronous(function(req, res, next){
   Redis.setInCache("redis-cash-register", userId, existingUser.cashRegister);
   res.json({cashRegister: existingUser.cashRegister});
 })
-
+// this can be done so much easier just by using Mongocollections
+// CashRegister.find()
 exports.generateRegister = asynchronous(function(req, res, next){
-  let adds = Object.keys(addresses).slice(0,5);
-  const Ripple = require('../services/rippleAPI');
-  let existingUser = req.user;
-  let userId = existingUser._id;
+  const existingUser = req.user;
+  const userId = existingUser._id;
+  const cashRegisters = await(CashRegister.find().sort({ balance: 1 }));
 
-  let registers = [];
-  let minAddr;
-  let newBal;
+  const medianBalanceIndex = Math.floor(cashRegisters.length / 2);
+  const assignedRegister = cashRegisters[medianBalanceIndex].address;
 
-  async.mapSeries(adds, asynchronous(function(address, cb){
-    const balance = await(Ripple.getBalance(address));
-    registers.push({ address, balance })
-    cb(null, address);
-  }),
-  function(error, resp){
-    //THIS SORT IS THREADSAFE and NON-BLOCKING
-    async.sortBy(registers, function(register, cb){
-      cb(null, register.balance);
-    },function(err, sortedRegisters){
-      let assignedRegister = sortedRegisters[Math.floor(registers.length/2)].address;
-      User.update({_id: existingUser._id}, {cashRegister: assignedRegister},
-        function (err) {
-          if (err) { return next(err); }
-          Redis.findFromAndUpdateCache("redis-cash-register", userId, null, assignedRegister);
-          res.json({
-            cashRegister: assignedRegister
-          });
-        });
-      })
-  })
-})
+  User.update({ _id: existingUser._id }, { cashRegister: assignedRegister },
+    function (err) {
+      if (err) { return next(err); }
+      Redis.findFromAndUpdateCache("redis-cash-register", userId, null, assignedRegister);
+      res.json({
+        cashRegister: assignedRegister
+      });
+    });
+});
 
 exports.receiveAllWallets = asynchronous(function(req, res, next){
   let existingUser = req.user;

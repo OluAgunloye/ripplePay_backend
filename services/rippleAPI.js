@@ -1,10 +1,9 @@
 // API to interact with Rippled Server
 const { RippleAPI } = require('ripple-lib');
-const BanksController = require('../controllers/banks_controller');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
-const Redis = require('../models/redis');
-const { Bank, CashRegister, Money } = require('../models/populateBank');
+const Redis = require('../services/redis');
+const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 
 const RippledServer = function() {
   this.api = new RippleAPI({
@@ -72,7 +71,7 @@ RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddre
 });
 
 function senderIsUser(id) {
-  return id !== BanksController.BANK_NAME;
+  return id !== BANK_NAME;
 }
 
 RippledServer.prototype.signAndSend = async(function(address, secret, userId, txnInfo) {

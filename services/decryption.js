@@ -1,29 +1,28 @@
 let aesjs = require('aes-js');
 let pbkdf2 = require('pbkdf2');
-const { Money } = require('../models/populateBank');
-const Redis = require('../models/redis');
+const { Money } = require('../models/moneyStorage');
+const Redis = require('../services/redis');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 
 exports.getMasterKey = async(function() {
-    let password, salt, hash, mongoBank;
+    let keyOne, keyTwo, keyHash, mongoBank;
     if (process.env.NODE_ENV=='production') {
-        password = process.env.PASSWORD;
+        keyOne = process.env.KEY_ONE;
         mongoBank = await (Money.findOne());
-        salt = mongoBank.salt;
-        hash = await (Redis.getFromTheCache("secret-hash", "admin"));
-        if (!hash) {
-            // put the following in a different file and gitignore from github but not from heroku
-            hash = pbkdf2.pbkdf2Sync(password, salt, 10, 32, 'sha512').toString('hex');
-            await (Redis.setInCache("secret-hash", "admin", hash));
+        keyTwo = mongoBank.KEY_TWO;
+        keyHash = await (Redis.getFromTheCache("secret-hash", "admin"));
+        if (!keyHash) {
+            keyHash = pbkdf2.pbkdf2Sync(keyOne, salt, 10, 32, 'sha512').toString('hex');
+            await (Redis.setInCache("secret-hash", "admin", keyHash));
         }
     } else {
-        password = require('../config').password;
-        salt = require('../config').salt;
-        hash = pbkdf2.pbkdf2Sync(password, salt, 10, 32, 'sha512').toString('hex');
+        keyOne = require('../configs/config').KEY_ONE;
+        keyTwo = require('../configs/config').KEY_TWO;
+        keyHash = pbkdf2.pbkdf2Sync(keyOne, keyTwo, 10, 32, 'sha512').toString('hex');
     }
 
-    let bytes = aesjs.utils.hex.toBytes(password + salt + hash);
+    let bytes = aesjs.utils.hex.toBytes(keyOne + keyTwo + keyHash);
     let masterKey = [];
 
     bytes.forEach((byte, i) => {

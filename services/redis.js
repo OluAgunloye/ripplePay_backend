@@ -45,4 +45,3 @@ exports.removeFromCache = asynchronous(function(key, userId) {
   const userKey = moddedKey(key, userId);
   await (RedisCache.delAsync(userKey));
 });
-
