@@ -6,9 +6,9 @@ const LocalStrategy = require('passport-local');
 const User = require('../models/user');
 let secret;
 if (process.env.NODE_ENV=='production') {
-  secret = process.env.Secret;
+  secret = process.env.SECRET;
 } else {
-  secret = require('../config').secret;
+  secret = require('../configs/config').SECRET;
 }
 
 let localOptions = {

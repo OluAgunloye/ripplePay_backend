@@ -1,39 +1,27 @@
 // API to interact with Rippled Server
 const { RippleAPI } = require('ripple-lib');
-const BanksController = require('../controllers/banks_controller');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
-const Redis = require('../models/redis');
-const { Bank, CashRegister, Money } = require('../models/populateBank');
+const Redis = require('../services/redis');
+const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 
-let addresses, bank;
-if (process.env.NODE_ENV == 'production') {
-  addresses = JSON.parse(process.env.REGISTERS);
-  bank = JSON.parse(process.env.BANK);
-} else {
-  addresses = require('./addresses').addresses;
-  bank = require('./addresses').bank;
-}
-
-exports.connect = async(function() {
-  const api = new RippleAPI({
+const RippledServer = function() {
+  this.api = new RippleAPI({
     server: 'wss://s2.ripple.com/' // Public rippled server hosted by Ripple, Inc.
     //Need to change this to a private one later.
   });
-  api.on('error', (errorCode, errorMessage) => {
+  this.api.on('error', (errorCode, errorMessage) => {
     console.log(errorCode + ': ' + errorMessage);
   });
-  api.on('connected', () => {
+  this.api.on('connected', () => {
     console.log('connected');
   });
-  api.on('disconnected', (code) => {
+  this.api.on('disconnected', (code) => {
     console.log('disconnected, code:', code);
   });
-  await (api.connect());
-  return api;
-})
+};
 
-exports.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, value){
+RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, value){
   let source = {
     "address": fromAddress,
     "tag": sourceTag,
@@ -59,19 +47,22 @@ exports.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, val
   return payment;
 };
 
-exports.getBalance = async(function(address) {
-  const balInfo = await (api.getBalances(address));
+RippledServer.prototype.getBalance = async(function(address) {
+  await(this.api.connect());
+  const balInfo = await (this.api.getBalances(address));
   return balInfo[0] ? parseFloat(balInfo[0].value) : 0;
 });
 
-exports.getSuccessfulTransactions = async(function(address) {
-  const successfulTransactions = await(api.getTransactions(address, { excludeFailures: true, types: ["payment"]}));
+RippledServer.prototype.getSuccessfulTransactions = async(function(address) {
+  await(this.api.connect());
+  const successfulTransactions = await(this.api.getTransactions(address, { excludeFailures: true, types: ["payment"]}));
   return successfulTransactions;
 });
 
-exports.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
-  const paymentObject = exports.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
-  const txnInfo = await(api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 1000 }));
+RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
+  await(this.api.connect());
+  const paymentObject = this.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
+  const txnInfo = await(this.api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 10000 }));
 
   if (userId) {
     await (Redis.setInCache("prepared-transaction", userId, txnInfo));
@@ -80,10 +71,12 @@ exports.getTransactionInfo = async(function(fromAddress, toAddress, value, sourc
 });
 
 function senderIsUser(id) {
-  return id !== BanksController.BANK_NAME;
+  return id !== BANK_NAME;
 }
 
-exports.signAndSend = async(function(address, secret, userId, txnInfo) {
+RippledServer.prototype.signAndSend = async(function(address, secret, userId, txnInfo) {
+  await(this.api.connect());
+
   if (senderIsUser(userId) && !txnInfo) {
     txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
     if (!txnInfo) {
@@ -93,7 +86,7 @@ exports.signAndSend = async(function(address, secret, userId, txnInfo) {
   console.log(txnInfo);
 
   const fee = parseFloat(txnInfo.instructions.fee);
-  const signature = api.sign(txnInfo.txJSON, secret);
+  const signature = this.api.sign(txnInfo.txJSON, secret);
   const txnBlob = signature.signedTransaction;
 
   if (senderIsUser(userId)) {
@@ -102,9 +95,9 @@ exports.signAndSend = async(function(address, secret, userId, txnInfo) {
     await(Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } })); 
   }
 
-  const result = await(api.submit(txnBlob));
+  const result = await(this.api.submit(txnBlob));
   await (Redis.removeFromCache("prepared-transaction", userId));
   return result;
 });
 
-const api = await(exports.connect());
+module.exports = RippledServer;

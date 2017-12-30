@@ -3,21 +3,22 @@
 let aesjs = require('aes-js');
 let pbkdf2 = require('pbkdf2');
 
-
 function encryptMyAddresses() {
 
-    let password, salt, hash, bank, addresses;
-    password = require('../config').password;
-    salt = require('../config').salt;
-    hash = pbkdf2.pbkdf2Sync(password, salt, 10, 32, 'sha512').toString('hex');
-    addresses = require('../controllers/addresses').addresses;
-    bank = require('../controllers/addresses').bank;
+    let keyOne, keyTwo, keyHash, bank, addresses;
+    keyOne = require('../configs/config').KEY_ONE;
+    keyTwo = require('../configs/config').KEY_TWO;
+    keyHash = pbkdf2.pbkdf2Sync(keyOne, keyTwo, 10, 32, 'sha512').toString('hex');
+    addresses = require('../configs/addresses').addresses;
+    bank = require('../configs/addresses').bank;
 
-    let arr = aesjs.utils.hex.toBytes(password+salt+hash);
+    let bytes = aesjs.utils.hex.toBytes(keyOne+keyTwo+keyHash);
+    
     let masterKey = [];
-    arr.forEach((val, i) => {
+
+    bytes.forEach((byte, i) => {
         if (i % 2 === 1) {
-            masterKey.push(val);
+            masterKey.push(byte);
         }
     });
 
@@ -55,4 +56,5 @@ exports.encrypt = function(masterKey, text) {
     return encryptedHex;
 };
 
+// for me:
 // console.log(encryptMyAddresses());
