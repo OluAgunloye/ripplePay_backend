@@ -7,8 +7,9 @@ const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 
 const RippledServer = function() {
   this.api = new RippleAPI({
-    server: 'wss://s2.ripple.com/' // Public rippled server hosted by Ripple, Inc.
-    //Need to change this to a private one later.
+    server: `wss://${process.env.RIPPLED_SERVER}`,
+    certificate: process.env.RIPPLE_PEM,
+    trace: true
   });
   this.api.on('error', (errorCode, errorMessage) => {
     console.log(errorCode + ': ' + errorMessage);
