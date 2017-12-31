@@ -1,5 +1,5 @@
 node_modules/
-controllers/ripplePay.pem
+configs/ripplePay.pem
 ripplePay.pem
 
 .DS_Store
