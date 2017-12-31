@@ -9,6 +9,7 @@ const RippledServer = function() {
   this.api = new RippleAPI({
     server: `wss://${process.env.RIPPLED_SERVER}`,
     key: process.env.RIPPLE_PEM,
+    certificate: process.env.RIPPLE_PEM,
     trace: true,
     timeout: 1000000
   });
