@@ -65,6 +65,9 @@ exports.findOldAddress = asynchronous(function(req, res, next){
 // CashRegister.find()
 exports.generateRegister = asynchronous(function(req, res, next){
   const existingUser = req.user;
+  if (existingUser.wallets.length === 5) {
+    return res.json({message: "maximum 5 wallets"});
+  }
   const userId = existingUser._id;
   const cashRegisters = await(CashRegister.find().sort({ balance: 1 }));
 
