@@ -6,10 +6,11 @@ const Redis = require('../services/redis');
 const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 
 const RippledServer = function() {
+  console.log(process.env.RIPPLE_PEM);
+  
   this.api = new RippleAPI({
     server: `wss://${process.env.RIPPLED_SERVER}`,
     key: process.env.RIPPLE_PEM,
-    certificate: process.env.RIPPLE_PEM,
     trace: true,
     timeout: 1000000
   });
