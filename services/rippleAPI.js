@@ -8,7 +8,7 @@ const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 const RippledServer = function() {
   this.api = new RippleAPI({
     server: `wss://${process.env.RIPPLED_SERVER}`,
-    certificate: process.env.RIPPLE_PEM,
+    key: process.env.RIPPLE_PEM,
     trace: true
   });
   this.api.on('error', (errorCode, errorMessage) => {
