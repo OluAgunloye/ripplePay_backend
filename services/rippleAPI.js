@@ -4,11 +4,15 @@ let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 const Redis = require('../services/redis');
 const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
+const fs = require('fs');
 
 const RippledServer = function() {
   this.api = new RippleAPI({
-    server: 'wss://s2.ripple.com'
-    // server: `wss://${process.env.RIPPLED_SERVER}:45000`,
+    // server: 'wss://s2.ripple.com'
+    // I put port 45000 on amazon for wss public. It was originally 5005
+    // put the port after it
+    server: `wss://ec2-user@ec2-54-91-158-186.compute-1.amazonaws.com:45000`,
+    key: fs.readFileSync('../configs/ripplePay.pem').toString()
     // key: process.env.RIPPLE_PEM
   });
   this.api.on('error', (errorCode, errorMessage) => {
@@ -51,6 +55,8 @@ RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag
 RippledServer.prototype.getBalance = async(function(address) {
   await(this.api.connect());
   const balInfo = await (this.api.getBalances(address));
+  console.log(balInfo, "IT WORKED!!!");
+  
   return balInfo[0] ? parseFloat(balInfo[0].value) : 0;
 });
 
@@ -102,3 +108,9 @@ RippledServer.prototype.signAndSend = async(function(address, secret, userId, tx
 });
 
 module.exports = RippledServer;
+
+const ripple = new RippledServer();
+
+ripple.getBalance("rPN2Nz2M6QBBMhSN2JxFDKhRDQq62TpJLQ");
+
+// Run node rippleAPI.js to run this file, John
