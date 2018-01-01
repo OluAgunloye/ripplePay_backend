@@ -66,7 +66,7 @@ RippledServer.prototype.getLedgerVersion = async(function(){
 RippledServer.prototype.getSuccessfulTransactions = async(function(address) {
   await(this.api.connect());
   const min = await(this.api.getLedgerVersion());
-  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: min, excludeFailures: true, types: ["payment"]}));
+  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: min - 100000, excludeFailures: true, types: ["payment"]}));
   return successfulTransactions;
 });
 
