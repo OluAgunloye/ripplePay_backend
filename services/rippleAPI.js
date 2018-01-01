@@ -11,7 +11,7 @@ const RippledServer = function() {
     // server: 'wss://s2.ripple.com'
     // I put port 45000 on amazon for wss public. It was originally 5005
     // put the port after it
-    server: `ws://34.203.248.196:5006`,
+    server: process.env.RIPPLED_SERVER,
     // key: fs.readFileSync('../configs/ripplePay.pem').toString()
     // key: process.env.RIPPLE_PEM
   });
@@ -59,9 +59,14 @@ RippledServer.prototype.getBalance = async(function(address) {
   return balInfo[0] ? parseFloat(balInfo[0].value) : 0;
 });
 
+RippledServer.prototype.getLedgerVersion = async(function(){
+  return this.api.getLedgerVersion();
+});
+
 RippledServer.prototype.getSuccessfulTransactions = async(function(address) {
   await(this.api.connect());
-  const successfulTransactions = await(this.api.getTransactions(address, { excludeFailures: true, types: ["payment"]}));
+  const min = await(this.api.getLedgerVersion());
+  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: min, excludeFailures: true, types: ["payment"]}));
   return successfulTransactions;
 });
 
