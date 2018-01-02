@@ -4,9 +4,7 @@ const Redis = require('../services/redis');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
-const RippledServer = require('../services/rippleAPI');
 let _ = require('lodash');
-const rippledServer = new RippledServer();
 
 //Since there is a very low chance of a coincide, this shouldn't have to recurse at all
 //or more than once ever.

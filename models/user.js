@@ -29,7 +29,11 @@ var userSchema = new Schema({
     required: 'Screen name is required',
     validate: [validateScreenName, 'Please enter a valid screen name (no symbols)']
   },
-  balance: {
+  availableBalance: {
+    type: Number,
+    default: 0,
+  },
+  currentBalance: {
     type: Number,
     default: 0,
   },

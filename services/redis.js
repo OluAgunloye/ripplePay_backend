@@ -45,3 +45,16 @@ exports.removeFromCache = asynchronous(function(key, userId) {
   const userKey = moddedKey(key, userId);
   await (RedisCache.delAsync(userKey));
 });
+
+// exports.setStream = function(key, values) {
+//   RedisCache.set(key, JSON.stringify(values));
+// };
+
+// exports.getStream = asynchronous(function(key){
+//   const stream = await(RedisCache.getAsync(key));
+//   if (stream) {
+//     await(RedisCache.delAsync(key));
+//     return JSON.parse(stream);  
+//   }
+//   return null;
+// });

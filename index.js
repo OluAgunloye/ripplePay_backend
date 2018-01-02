@@ -29,6 +29,7 @@ global.RedisCache = client;
 
 var router = require('./services/router');
 const { tokenForUser } = require('./services/token');
+const { startTransactionCycle } = require('./services/transactionCycle');
 
 if (process.env.NODE_ENV=='production') {
   mongoose.connect(process.env.MONGO_URL);
@@ -53,3 +54,5 @@ var PORT = process.env.PORT || 3000;
 
 console.log('Listening on', PORT);
 app.listen(PORT);
+
+startTransactionCycle();

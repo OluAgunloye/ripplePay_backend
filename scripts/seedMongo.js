@@ -6,6 +6,7 @@ const async = require('async');
 const { addresses, bank } = require('../configs/addresses');
 const { CashRegister, Money } = require('../models/moneyStorage');
 const { ShapeShiftTransaction } = require('../models/shapeShiftTransaction');
+const { Transaction } = require('../models/transaction');
 
 mongoose.Promise = global.Promise;
 
@@ -22,22 +23,25 @@ mongoose.connection.once('connected', () => {
     mongoose.connection.db.collection("cashregisters").createIndex({address: 1}, {background: true});
     mongoose.connection.db.collection("cashregisters").createIndex({balance: 1}, {background: true});
     mongoose.connection.db.collection("shapeshifttransactions").createIndex({ userId: 1, shapeShiftAddress: 1, date: 1}, {background: true});
+    mongoose.connection.db.collection("transactions").createIndex({ userId: 1 }, {background: true});
+    mongoose.connection.db.collection("transactions").createIndex({ txnId: 1 }, {background: true});
+    mongoose.connection.db.collection("transactions").createIndex({ tag: 1 }, {background: true});
     mongoose.connection.db.collection("users").createIndex({screenName: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({email: 1}, {background: true});
     mongoose.connection.db.collection("usedwallets").createIndex({wallet: 1}, {background: true});
 });
-const RippledServer = require('../services/rippleAPI');
-const rippledServer = new RippledServer();
+const Ripple = require('../services/rippleAPI');
+
 let addrs = Object.keys(addresses);
 
-rippledServer.api.connect().then(()=>{
+Ripple.rippledServer.api.connect().then(()=>{
   let generate = function(n = 0){
 
     if ( n === 5 )
     {
       return;
     }
-    rippledServer.api.getBalances(addrs[n]).then((info) => {
+    Ripple.rippledServer.api.getBalances(addrs[n]).then((info) => {
       let Register = CashRegister;
       let registerSpecs = {
         address: addrs[n],
@@ -59,5 +63,9 @@ money.save(function(err){
 });
 let shapeShiftTransaction = new ShapeShiftTransaction;
 shapeShiftTransaction.save(function(err){
+
+});
+let transaction = new Transaction;
+transaction.save(function(err){
 
 });

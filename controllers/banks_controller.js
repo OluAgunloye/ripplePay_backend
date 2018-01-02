@@ -6,8 +6,7 @@ const { CashRegister, BANK_NAME } = require('../models/moneyStorage');
 const Redis = require('../services/redis');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
-const RippledServer = require('../services/rippleAPI');
-const rippledServer = new RippledServer();
+const Ripple = require('../services/rippleAPI');
 
 let encryptedAddresses, encryptedBank;
 if (process.env.NODE_ENV=='production') {
@@ -64,7 +63,7 @@ exports.preparePayment = asynchronous(function(req, res, next) {
     res.json({ message: "Balance Insufficient" });
     return;
   }
-  const txnInfo = await(rippledServer.getTransactionInfo(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
+  const txnInfo = await(Ripple.rippledServer.createTransaction(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
   const fee = txnInfo.instructions.fee;
   res.json({
     fee: txnInfo.instructions.fee
@@ -76,8 +75,12 @@ exports.signAndSend = asynchronous (function(req, res, next){
   const existingUser = req.user;
   const userId = existingUser._id;
 
+  if (amount > existingUser.balance) {
+    return res.json({ message: "Balance Insufficient", balance: existingUser.balance });
+  }
+
   const registerAddress = fromAddress;
-  const registerBalance = await(rippledServer.getBalance(registerAddress));
+  const registerBalance = await(Ripple.rippledServer.getBalance(registerAddress));
 
   const masterKey = await(Decryption.getMasterKey());
   
@@ -87,7 +90,7 @@ exports.signAndSend = asynchronous (function(req, res, next){
       const encryptedRegisterSecret = encryptedAddresses[encryptedRegisterAddress];
       const registerSecret = Decryption.decrypt(masterKey, encryptedRegisterSecret);
 
-      const result = await(rippledServer.signAndSend(registerAddress, registerSecret, userId));
+      const result = await(Ripple.rippledServer.signAndSend(registerAddress, registerSecret, userId));
 
       if (result) {
         console.log(result);
@@ -107,8 +110,8 @@ exports.signAndSend = asynchronous (function(req, res, next){
       const bankSecret = Decryption.decrypt(masterKey, encryptedBankSecret);
       
       // refilling by 20 for now until we find a better wallet refill algorithm
-      const txnInfo = await(rippledServer.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
-      const result = await(rippledServer.signAndSend(bankAddress, bankSecret, BANK_NAME, txnInfo));
+      const txnInfo = await(Ripple.rippledServer.createTransaction(bankAddress, registerAddress, 20, 0, null, null));
+      const result = await(Ripple.rippledServer.signAndSend(bankAddress, bankSecret, BANK_NAME, txnInfo));
       console.log(result);
       sendMoney();
 
@@ -131,9 +134,9 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   const userId = existingUser._id;
   if (existingUser.cashRegister)
   {
-    const registerBalance = await (rippledServer.getBalance(existingUser.cashRegister));
+    const registerBalance = await (Ripple.rippledServer.getBalance(existingUser.cashRegister));
     await (CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: registerBalance }, {upsert: false}));
-    const transactions = await (rippledServer.getSuccessfulTransactions(existingUser.cashRegister));
+    const transactions = await (Ripple.rippledServer.getSuccessfulTransactions(existingUser.cashRegister));
     // console.log(txnInfo);
     let userObject = {
       _id: existingUser._id,

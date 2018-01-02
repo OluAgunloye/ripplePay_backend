@@ -2,10 +2,20 @@ let aesjs = require('aes-js');
 let pbkdf2 = require('pbkdf2');
 const { Money } = require('../models/moneyStorage');
 const Redis = require('../services/redis');
-let async = require('asyncawait/async');
+const async = require('async');
+let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
 
-exports.getMasterKey = async(function() {
+let encryptedAddresses, encryptedBank;
+if (process.env.NODE_ENV == 'production') {
+    encryptedAddresses = JSON.parse(process.env.REGISTERS);
+    encryptedBank = JSON.parse(process.env.BANK);
+} else {
+    encryptedAddresses = require('../configs/addresses').encryptedAddresses;
+    encryptedBank = require('../configs/addresses').encryptedBank;
+}
+
+exports.getMasterKey = asynchronous(function() {
     let keyOne, keyTwo, keyHash, mongoBank;
     if (process.env.NODE_ENV=='production') {
 
@@ -37,6 +47,7 @@ exports.getMasterKey = async(function() {
     let masterKey = [];
 
     // convert to 32 bytes
+    // the following may be blocking but barely
     bytes.forEach((byte, i) => {
         if (i % 2 === 1) {
             masterKey.push(byte);
@@ -55,3 +66,15 @@ exports.decrypt = function(masterKey, encryptedHex) {
     const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
     return decryptedText;
 }
+
+exports.decryptAllAddresses = function(masterKey, encryptedAddresses){
+    const cryptAddresses = Object.keys(encryptedAddresses);
+    return cryptAddresses.map((cryptAddress) => exports.decrypt(masterKey, cryptAddress));
+};
+
+// const fn = asynchronous(function() {
+//     const masterKey = await(exports.getMasterKey());
+//     console.log(exports.decryptAllAddresses(masterKey, encryptedAddresses));
+// })
+
+// fn()
