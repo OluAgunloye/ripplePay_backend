@@ -6,12 +6,12 @@ const Redis = require('../services/redis');
 const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 const fs = require('fs');
 
+// This is the min ledger version that personal rippled server has.
+const MIN_LEDGER_VERSION = 35499876;
+
 const RippledServer = function() {
   this.api = new RippleAPI({
-    // server: 'wss://s2.ripple.com'
-    // I put port 45000 on amazon for wss public. It was originally 5005
-    // put the port after it
-    server: process.env.RIPPLED_SERVER,
+    server: process.env.NODE_ENV === 'production' ? process.env.RIPPLED_SERVER : require('../configs/config').RIPPLED_SERVER
     // key: fs.readFileSync('../configs/ripplePay.pem').toString()
     // key: process.env.RIPPLE_PEM
   });
@@ -63,12 +63,16 @@ RippledServer.prototype.getLedgerVersion = async(function(){
   return this.api.getLedgerVersion();
 });
 
+RippledServer.prototype.getServerInfo = async(function(){
+  await(this.api.connect());
+  const serverInfo = await(this.api.getServerInfo());
+  console.log(serverInfo);
+  return serverInfo;
+});
+
 RippledServer.prototype.getSuccessfulTransactions = async(function(address) {
   await(this.api.connect());
-  const min = await(this.api.getLedgerVersion());
-  console.log(min, "Is the ledger version");
-  
-  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: min - 300, excludeFailures: true, types: ["payment"]}));
+  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: MIN_LEDGER_VERSION, excludeFailures: true, types: ["payment"]}));
   return successfulTransactions;
 });
 
@@ -117,6 +121,6 @@ module.exports = RippledServer;
 
 // const ripple = new RippledServer();
 
-// ripple.getBalance("rPN2Nz2M6QBBMhSN2JxFDKhRDQq62TpJLQ");
+// ripple.getServerInfo();
 
-// Run node rippleAPI.js to run this file, John
+// Run node rippleAPI.js to run this file for testing
