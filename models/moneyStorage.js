@@ -24,7 +24,7 @@ let usedWalletSchema = new Schema ({
 
 let moneySchema = new Schema ({
   KEY_TWO: {
-    type: String
+    type: String,
   },
   cost: {
     type: Number,
