@@ -167,21 +167,25 @@ exports.getTransactions = asynchronous(function (req, res, next) {
               return;
             }
           });
-          const balance = currTxn.outcome.balanceChanges[userAddress][0].value;
-          console.log(balance);
-          let balanceChange = parseFloat(balance.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0]);
-          if ( balanceChange < 0 )
+          const balanceChange = currTxn.outcome.balanceChanges[userAddress][0].value;
+
+          if ( balanceChange < 0 && currTxn.outcome.result === "tesSUCCESS")
           {
+            // ripplePay fee for outgoing txn
             balanceChange -= 0.02;
           }
+
           userObject.balance += balanceChange;
-          let newTxn = {
-            date: new Date(currTxn.outcome.timestamp),
-            amount: balanceChange,
-            txnId: currTxn.id,
-            otherParty: counterParty
-          };
-          userObject.transactions.unshift(newTxn);
+          // add to user transactions only if its a successful transaction
+          if (currTxn.outcome.result === "tesSUCCESS") {
+            let newTxn = {
+              date: new Date(currTxn.outcome.timestamp),
+              amount: balanceChange,
+              txnId: currTxn.id,
+              otherParty: counterParty
+            };
+            userObject.transactions.unshift(newTxn);
+          }
       }
       return [setLastTransaction, stopIteration];
     };
@@ -217,4 +221,3 @@ exports.getTransactions = asynchronous(function (req, res, next) {
     });
   }
 })
-// 
