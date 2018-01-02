@@ -168,6 +168,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             }
           });
           const balance = currTxn.outcome.balanceChanges[userAddress][0].value;
+          console.log(balance);
           let balanceChange = parseFloat(balance.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0]);
           if ( balanceChange < 0 )
           {
