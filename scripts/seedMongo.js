@@ -54,6 +54,7 @@ rippledServer.api.connect().then(()=>{
 });
 
 let money = new Money;
+money.KEY_TWO = require('../configs/config').KEY_TWO;
 money.save(function(err){
 
 });
