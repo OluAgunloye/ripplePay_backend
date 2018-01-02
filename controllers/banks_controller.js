@@ -167,7 +167,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
               return;
             }
           });
-          const balanceChange = currTxn.outcome.balanceChanges[userAddress][0].value;
+          let balanceChange = currTxn.outcome.balanceChanges[userAddress][0].value;
 
           if ( balanceChange < 0 && currTxn.outcome.result === "tesSUCCESS")
           {
