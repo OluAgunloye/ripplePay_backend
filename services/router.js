@@ -21,34 +21,38 @@ router.route('/signin')
   .post([requireLogin, AuthenticationController.signin]);
 router.route('/authUrl')
   .post(requireAuth, AuthenticationController.comparePassword);
+  router.route('/search')
+    .get(requireAuth, AuthenticationController.search);
 router.route('/banksend')
   .post(requireAuth, BankController.inBankSend);
 router.route('/send')
   .post(requireAuth, BankController.signAndSend);
 router.route('/payment')
   .post(requireAuth, BankController.preparePayment);
-router.route('/search')
-  .get(requireAuth, AuthenticationController.search);
 router.route('/transactions')
   .get(requireAuth, BankController.getTransactions);
-
-router.route('/delwallet')
+router.route('/nextTransactions')
+  .get(requireAuth, BankController.loadNextTransactions);
+  
+  router.route('/delwallet')
   .post([requireAuth, WalletController.deleteWallet]);
-router.route('/delRegister')
+  router.route('/delRegister')
   .post(requireAuth, WalletController.removeCashRegister);
-router.route('/dest')
+  router.route('/dest')
   .post(requireAuth, WalletController.receiveOnlyDesTag);
-router.route('/addrs')
+  router.route('/addrs')
   .post(requireAuth, WalletController.generateRegister);
-router.route('/wallets')
+  router.route('/wallets')
   .get(requireAuth, WalletController.receiveAllWallets);
-router.route('/old')
+  router.route('/old')
   .get(requireAuth, WalletController.findOldAddress);
-router.route('/makeshift')
+  router.route('/makeshift')
   .post(requireAuth, ShapeshiftController.createShapeshiftTransaction);
-router.route('/getshifts')
+  router.route('/getshifts')
   .get(requireAuth, ShapeshiftController.getShapeshiftTransactions);
-router.route('/getShapeId')
+  router.route('/nextShapeShiftTransactions')
+    .get(requireAuth, ShapeshiftController.loadNextShapeShiftTransactions);
+  router.route('/getShapeId')
   .get(requireAuth, ShapeshiftController.getShapeshiftTransactionId);
 
 // xxx Routes
