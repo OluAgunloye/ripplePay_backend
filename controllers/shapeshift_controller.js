@@ -44,6 +44,14 @@ exports.getShapeshiftTransactions = asynchronous (function(req, res, next) {
   res.json({ shapeshiftTransactions });
 })
 
+exports.loadNextShapeShiftTransactions = asynchronous(function (req, res, next) {
+  const user = req.user;
+  const userId = user._id;
+  const minDate = req.query[0];
+  const nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, "$gte": { date: minDate } }).sort({ date: 1 }).limit(25));
+  res.json({ nextShapeShiftTransactions });
+});
+
 exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   const existingUser = req.user;
   const userId = existingUser._id;

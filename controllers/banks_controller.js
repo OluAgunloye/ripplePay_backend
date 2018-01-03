@@ -159,8 +159,8 @@ exports.getTransactions = asynchronous(function (req, res, next) {
 
     let userWallets = existingUser.wallets;
     const userAddress = existingUser.cashRegister;
+    let userTransactions = [];
     // limit to 25 transactions and add scrolling on the frontend to load next 25
-    const userTransactions = await(Transaction.find({ userId }).limit(25));
 
     const processTransaction = asynchronous(function(currTxn, setLastTransaction, stopIteration) {
 
@@ -203,17 +203,15 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         userObject.balance += balanceChange;
         // add to user transactions only if its a successful transaction
         if (currTxn.outcome.result === "tesSUCCESS") {
-          let newTxn = {
+          let newTxn = new Transaction({
             txnId: currTxn.id,
             userId: userId,
             tag: tag,
             date: new Date(currTxn.outcome.timestamp),
             amount: balanceChange,
             otherParty: counterParty
-          };
-          userTransactions.unshift(newTxn);
-          const txnDoc = new Transaction(newTxn);
-          await(txnDoc.save());
+          });
+          await(newTxn.save());
         }
       }
       return [setLastTransaction, stopIteration];
@@ -233,6 +231,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
       }
     }), function(error, resp) {
       //SORTING OF TRANSACTIONS BY DATE INSIDE OF THE SERVER IS BLOCKING INSTEAD THE SORTING IS DONE IN HOME.JS CLIENT-SIDE
+      userTransactions = await(Transaction.find({ userId }).sort({ date: 1 }).limit(25));
       User.update({_id: existingUser._id}, userObject, function (err) {
         if (err) { return next(err); }
         res.json({
@@ -244,9 +243,18 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   }
   else
   {
+    userTransactions = await(Transaction.find({ userId }).sort({ date: 1 }).limit(25));
     res.json({
       transactions: userTransactions,
       balance: existingUser.balance
     });
   }
 })
+
+exports.loadNextTransactions = asynchronous(function(req, res, next) {
+  const user = req.user;
+  const userId = user._id;
+  const minDate = req.query[0];
+  const nextTransactions = await(Transaction.find({ userId: userId, "$gte": { date: minDate } }).sort({ date: 1 }).limit(25));
+  res.json({ nextTransactions });
+});
