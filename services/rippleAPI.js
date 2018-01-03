@@ -4,13 +4,13 @@ let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 const Redis = require('../services/redis');
 const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
-const fs = require('fs');
 
-// This is the min ledger version that personal rippled server has.
-const MIN_LEDGER_VERSION = 35499876;
+// This is the min ledger version that personal rippled server has from beginning of its time.
+exports.MIN_LEDGER_VERSION = 35527873;
 
 const RippledServer = function() {
   this.api = new RippleAPI({
+    // server: 'wss://s2.ripple.com',
     server: process.env.NODE_ENV === 'production' ? process.env.RIPPLED_SERVER : require('../configs/config').RIPPLED_SERVER
     // key: fs.readFileSync('../configs/ripplePay.pem').toString()
     // key: process.env.RIPPLE_PEM
@@ -121,6 +121,6 @@ module.exports = RippledServer;
 
 // const ripple = new RippledServer();
 
-// ripple.getServerInfo();
+// ripple.getSuccessfulTransactions("r9bxkP88S17EudmfbgdZsegEaaM76pHiW6");
 
 // Run node rippleAPI.js to run this file for testing

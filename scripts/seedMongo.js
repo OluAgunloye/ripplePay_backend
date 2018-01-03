@@ -6,12 +6,17 @@ const async = require('async');
 const { addresses, bank } = require('../configs/addresses');
 const { CashRegister, Money } = require('../models/moneyStorage');
 const { ShapeShiftTransaction } = require('../models/shapeShiftTransaction');
+const { Transaction } = require('../models/transaction');
 
 mongoose.Promise = global.Promise;
 
 if (process.env.NODE_ENV == 'production') {
   mongoose.connect(process.env.MONGO_URL);
-} else {
+} 
+else if (process.env.NODE_ENV == "seed-production") {
+  mongoose.connect(require('../configs/config').MONGO_URL);
+}
+else {
   mongoose.connect('mongodb://localhost:ripplePay/ripplePay');
 }
 
@@ -21,6 +26,8 @@ mongoose.connection.once('connected', () => {
     mongoose.connection.db.dropCollection('money');
     mongoose.connection.db.collection("cashregisters").createIndex({address: 1}, {background: true});
     mongoose.connection.db.collection("cashregisters").createIndex({balance: 1}, {background: true});
+    mongoose.connection.db.collection("transactions").createIndex({ userId: 1 }, { background: true });
+    mongoose.connection.db.collection("transactions").createIndex({ txnId: 1 }, { background: true });
     mongoose.connection.db.collection("shapeshifttransactions").createIndex({ userId: 1, shapeShiftAddress: 1, date: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({screenName: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({email: 1}, {background: true});
@@ -60,5 +67,9 @@ money.save(function(err){
 });
 let shapeShiftTransaction = new ShapeShiftTransaction;
 shapeShiftTransaction.save(function(err){
+
+});
+let transaction = new Transaction;
+transaction.save(function (err) {
 
 });
