@@ -30,22 +30,27 @@ exports.inBankSend = asynchronous(function(req, res, next){
   if ( sender && receiver )
   {
     let trTime = new Date;
+
     let senderBal = {
       balance: sender.balance - amount
     };
+
     let senderTransaction = {
       date: trTime,
       amount: -amount,
       otherParty: receiver.screenName
     };
+
     let receiverBal = {
       balance: receiver.balance + amount
     };
+
     let receiverTransaction = {
       date: trTime,
       amount: amount,
       otherParty: sender.screenName
     };
+
     await (User.update({_id: sender_id}, {'$set': senderBal, '$push': {transactions: senderTransaction}}));
     await (User.findOneAndUpdate({ screenName: receiverScreenName }, {'$set': receiverBal, '$push': {transactions: receiverTransaction}}));
     res.json({message: "Payment was Successful", balance: senderBal.balance});
@@ -147,8 +152,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
 
     const processTransaction = function(currTxn, setLastTransaction, stopIteration) {
       if(
-        userWallets.includes(currTxn.specification.destination.tag) || 
-        userWallets.includes(currTxn.specification.source.tag)
+        userWallets.includes(currTxn.specification.destination.tag) || userWallets.includes(currTxn.specification.source.tag)
       ) {
         if ( setLastTransaction )
         {
@@ -174,7 +178,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             // ripplePay fee for outgoing txn
             balanceChange -= 0.02;
           }
-
+          // apply ripple ledger fee
           userObject.balance += balanceChange;
           // add to user transactions only if its a successful transaction
           if (currTxn.outcome.result === "tesSUCCESS") {
