@@ -34,12 +34,6 @@ var userSchema = new Schema({
     default: 0,
   },
   wallets: [],
-  transactions: [{
-    txnId: String,
-    date: Date,
-    amount: Number,
-    otherParty: String
-  }],
   lastTransactionId: {
     type: String,
     default: ''
