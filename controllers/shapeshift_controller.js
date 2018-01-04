@@ -10,6 +10,9 @@ const rippledServer = new RippledServer();
 // to e.g. would be 'to 1 BTC'
 // shapeshiftAddress should be URI encoded if its a Ripple address
 // tell user to get the TXN id in their other wallet if its a deposit transaction
+
+const TXN_LIMIT = 10;
+
 exports.createShapeshiftTransaction = asynchronous (function(req, res, next) {
   let { otherParty, from, to, shapeShiftAddress, refundAddress, orderId } = req.body;
   let userId = req.user._id;
@@ -21,10 +24,9 @@ exports.createShapeshiftTransaction = asynchronous (function(req, res, next) {
     otherParty,
     refundAddress,
     orderId,
-    date: new Date()
+    date: new Date().getTime()
   };
-  
-  let shapeShiftTransaction = new ShapeShiftTransaction(shapeshift);
+  const shapeShiftTransaction = new ShapeShiftTransaction(shapeshift);
   shapeShiftTransaction.save(function(err) {
     if (err) { return next(err); }
   })
@@ -39,10 +41,21 @@ exports.getShapeshiftTransactions = asynchronous (function(req, res, next) {
   if (cacheVal) {
     return res.json({shapeshiftTransactions: cacheVal});
   }
-  const shapeshiftTransactions = await (ShapeShiftTransaction.find({ userId }));
+  const shapeshiftTransactions = await (ShapeShiftTransaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
   Redis.setInCache("shapeshift-transactions", userId, shapeshiftTransactions);
   res.json({ shapeshiftTransactions });
 })
+
+// $lt instead of $lte because transaction happening at same millisecond for user is highly unlikely. Maybe change later.
+exports.loadNextShapeShiftTransactions = asynchronous(function (req, res, next) {
+  const user = req.user;
+  const userId = user._id;
+  const maxDate = req.query[0];
+  const nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, date: { '$lt': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.unshift(...nextShapeShiftTransactions));
+  const shouldLoadMoreShapeShiftTransactions = nextShapeShiftTransactions.length >= TXN_LIMIT ? true : false;
+  res.json({ nextShapeShiftTransactions, shouldLoadMoreShapeShiftTransactions });
+});
 
 exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   const existingUser = req.user;
@@ -52,17 +65,18 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   let shapeShiftAddress = query['0'];
   let date = query['1'];
   let fromAddress = query['2'];
-  const shapeShiftTransaction = await (ShapeShiftTransaction.findOne({ userId, shapeShiftAddress, date }));
+  const shapeShiftTransaction = await (ShapeShiftTransaction.findOne({ userId, date, shapeShiftAddress }));
 
   if (shapeShiftTransaction.txnId) {
     return res.json({ txnId: shapeShiftTransaction.txnId });
   }
   // if i don't have txnId for this shapeshift transaction, I will go to ripple ledger to find it.
+  // to help customers get refund from shapeshift if they have to.
   let toAddress = shapeShiftAddress.match(/\w+/)[0];
   let destTag = parseInt(shapeShiftAddress.match(/\?dt=(\d+)/)[1]);
 
   
-  let txnInfo = await (rippledServer.getSuccessfulTransactions(fromAddress));
+  let txnInfo = await (rippledServer.getTransactions(fromAddress));
 
   const processTransaction = function(currTxn) {
     if(toAddress === currTxn.specification.destination.address && destTag === currTxn.specification.destination.tag) {

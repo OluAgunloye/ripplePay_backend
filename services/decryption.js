@@ -55,4 +55,14 @@ exports.decrypt = function(masterKey, encryptedHex) {
     return decryptedText;
 }
 
-exports.getMasterKey();
+exports.decryptAllAddresses = function (masterKey, encryptedAddresses) {
+    const cryptAddresses = Object.keys(encryptedAddresses);
+    return cryptAddresses.map((cryptAddress) => exports.decrypt(masterKey, cryptAddress));
+};
+
+// const fn = async(function() {
+//     const masterKey = await(exports.getMasterKey());
+//     console.log(exports.decryptAllAddresses(masterKey, encryptedAddresses));
+// })
+
+// fn()
