@@ -78,9 +78,10 @@ exports.preparePayment = asynchronous(function(req, res, next) {
   const masterKey = await(Decryption.getMasterKey());
   const ripplePayAddresses = Decryption.decryptAllAddresses(masterKey, encryptedAddresses);
 
-  if (ripplePayAddresses.includes(toAddress)) {
-    return res.json({ message: "Send with no fee to a ripplePay user!"});
-  }
+  // LEAVE THIS OUT TO ALLOW FOR TESTING
+  // if (ripplePayAddresses.includes(toAddress)) {
+  //   return res.json({ message: "Send with no fee to a ripplePay user!"});
+  // }
 
   const txnInfo = await(rippledServer.getTransactionInfo(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
   const fee = txnInfo.instructions.fee;
