@@ -4,7 +4,6 @@ let await = require('asyncawait/await');
 const User = require('../models/user');
 const { CashRegister, BANK_NAME } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
-const Redis = require('../services/redis');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
 const RippledServer = require('../services/rippleAPI');
@@ -19,6 +18,8 @@ if (process.env.NODE_ENV=='production') {
   encryptedBank = require('../configs/addresses').encryptedBank;
 }
 
+const TXN_LIMIT = 10;
+
 exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
   let sender = req.user;
@@ -29,7 +30,7 @@ exports.inBankSend = asynchronous(function(req, res, next){
   let receiver = await (User.findOne({ screenName: receiverScreenName}));
   let receiverId = receiver._id;
   if ( sender && receiver ) {
-    let trTime = new Date;
+    let trTime = new Date().getTime();
 
     let senderBal = {
       balance: sender.balance - amount
@@ -149,7 +150,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   if (existingUser.cashRegister) {
     const registerBalance = await (rippledServer.getBalance(existingUser.cashRegister));
     await (CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: registerBalance }, {upsert: false}));
-    const transactions = await (rippledServer.getSuccessfulTransactions(existingUser.cashRegister));
+    const transactions = await (rippledServer.getTransactions(existingUser.cashRegister));
     // console.log(txnInfo);
     let userObject = {
       _id: existingUser._id,
@@ -160,16 +161,15 @@ exports.getTransactions = asynchronous(function (req, res, next) {
     let userWallets = existingUser.wallets;
     const userAddress = existingUser.cashRegister;
     let userTransactions = [];
-    // limit to 25 transactions and add scrolling on the frontend to load next 25
 
     const processTransaction = asynchronous(function(currTxn, setLastTransaction, stopIteration) {
 
-      const destAddress = currTxn.destination.address;
-      const destTag = currTxn.destination.tag;
-      const sourceAddress = currTxn.source.address;
-      const sourceTag = currTxn.source.tag;
-      const destTagIdx = userWallets.indexOf(currTxn.specification.destination.tag);
-      const sourceTagIdx = userWallets.indexOf(currTxn.specification.source.tag);
+      const destAddress = currTxn.specification.destination.address;
+      const destTag = currTxn.specification.destination.tag;
+      const sourceAddress = currTxn.specification.source.address;
+      const sourceTag = currTxn.specification.source.tag;
+      const destTagIdx = userWallets.indexOf(destTag);
+      const sourceTagIdx = userWallets.indexOf(sourceTag);
 
       if ( (destTagIdx !== -1 && destAddress === userAddress) || (sourceTagIdx !== -1 && sourceAddress === userAddress) ) {
         if ( setLastTransaction )
@@ -192,7 +192,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
           tag = sourceTag;
         }
 
-        let balanceChange = currTxn.outcome.balanceChanges[userAddress][0].value;
+        let balanceChange = parseFloat(currTxn.outcome.balanceChanges[userAddress][0].value);
 
         if ( balanceChange < 0 && currTxn.outcome.result === "tesSUCCESS")
         {
@@ -207,7 +207,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             txnId: currTxn.id,
             userId: userId,
             tag: tag,
-            date: new Date(currTxn.outcome.timestamp),
+            date: new Date(currTxn.outcome.timestamp).getTime(),
             amount: balanceChange,
             otherParty: counterParty
           });
@@ -230,8 +230,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         cb(true)
       }
     }), function(error, resp) {
-      //SORTING OF TRANSACTIONS BY DATE INSIDE OF THE SERVER IS BLOCKING INSTEAD THE SORTING IS DONE IN HOME.JS CLIENT-SIDE
-      userTransactions = await(Transaction.find({ userId }).sort({ date: 1 }).limit(25));
+      userTransactions = await(Transaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
       User.update({_id: existingUser._id}, userObject, function (err) {
         if (err) { return next(err); }
         res.json({
@@ -243,7 +242,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   }
   else
   {
-    userTransactions = await(Transaction.find({ userId }).sort({ date: 1 }).limit(25));
+    userTransactions = await(Transaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
     res.json({
       transactions: userTransactions,
       balance: existingUser.balance
@@ -251,10 +250,12 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   }
 })
 
+// $lt instead of $lte because transaction happening at same exact millisecond for user is highly unlikely. But maybe change later.
 exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const user = req.user;
   const userId = user._id;
-  const minDate = req.query[0];
-  const nextTransactions = await(Transaction.find({ userId: userId, "$gte": { date: minDate } }).sort({ date: 1 }).limit(25));
-  res.json({ nextTransactions });
+  const maxDate = req.query[0];
+  const nextTransactions = await(Transaction.find({ userId: userId, date: { '$lt': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  const shouldLoadMoreTransactions = nextTransactions.length >= TXN_LIMIT ? true : false;
+  res.json({ nextTransactions, shouldLoadMoreTransactions });
 });

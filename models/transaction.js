@@ -14,7 +14,7 @@ const transactionSchema = new Schema({
         default: -1
     },
     date: {
-        type: Date
+        type: Number
     },
     amount: {
         type: Number

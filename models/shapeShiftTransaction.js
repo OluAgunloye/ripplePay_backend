@@ -12,7 +12,7 @@ const shapeShiftTransactionSchema = new Schema({
         type: String
     },
     date: {
-        type: Date
+        type: Number
     },
     otherParty: {
         type: String

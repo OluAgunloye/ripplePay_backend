@@ -6,12 +6,12 @@ const Redis = require('../services/redis');
 const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
 
 // This is the min ledger version that personal rippled server has from beginning of its time.
-exports.MIN_LEDGER_VERSION = 35527873;
+exports.MIN_LEDGER_VERSION = 35550104;
 
 const RippledServer = function() {
   this.api = new RippleAPI({
-    // server: 'wss://s2.ripple.com',
-    server: process.env.NODE_ENV === 'production' ? process.env.RIPPLED_SERVER : require('../configs/config').RIPPLED_SERVER
+    server: 'wss://s2.ripple.com',
+    // server: process.env.NODE_ENV === 'production' ? process.env.RIPPLED_SERVER : require('../configs/config').RIPPLED_SERVER
     // key: fs.readFileSync('../configs/ripplePay.pem').toString()
     // key: process.env.RIPPLE_PEM
   });
@@ -70,10 +70,16 @@ RippledServer.prototype.getServerInfo = async(function(){
   return serverInfo;
 });
 
-RippledServer.prototype.getSuccessfulTransactions = async(function(address) {
+RippledServer.prototype.getTransactions = async(function(address) {
   await(this.api.connect());
-  const successfulTransactions = await(this.api.getTransactions(address, { minLedgerVersion: MIN_LEDGER_VERSION, excludeFailures: true, types: ["payment"]}));
-  return successfulTransactions;
+  const serverInfo = await(this.api.getServerInfo());
+  const completeLedgers = serverInfo.completeLedgers.match(/\d+/g);
+  const minLedgerVersion = parseInt(completeLedgers[0]);
+  const maxLedgerVersion = parseInt(completeLedgers[1]);
+  console.log(minLedgerVersion, maxLedgerVersion);
+  
+  const transactions = await(this.api.getTransactions(address, { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"]}));
+  return transactions;
 });
 
 RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
@@ -121,6 +127,7 @@ module.exports = RippledServer;
 
 // const ripple = new RippledServer();
 
-// ripple.getSuccessfulTransactions("r9bxkP88S17EudmfbgdZsegEaaM76pHiW6");
+// ripple.getServerInfo();
+// ripple.getTransactions("r9bxkP88S17EudmfbgdZsegEaaM76pHiW6");
 
 // Run node rippleAPI.js to run this file for testing
