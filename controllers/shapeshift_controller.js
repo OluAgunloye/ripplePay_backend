@@ -46,12 +46,13 @@ exports.getShapeshiftTransactions = asynchronous (function(req, res, next) {
   res.json({ shapeshiftTransactions });
 })
 
-// $lt instead of $lte because transaction happening at same millisecond for user is highly unlikely. Maybe change later.
 exports.loadNextShapeShiftTransactions = asynchronous(function (req, res, next) {
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  const nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, date: { '$lt': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  let nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  // remove the first transaction because that will already have been counted
+  nextShapeShiftTransactions = nextShapeShiftTransactions.slice(1);
   Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.unshift(...nextShapeShiftTransactions));
   const shouldLoadMoreShapeShiftTransactions = nextShapeShiftTransactions.length >= TXN_LIMIT ? true : false;
   res.json({ nextShapeShiftTransactions, shouldLoadMoreShapeShiftTransactions });

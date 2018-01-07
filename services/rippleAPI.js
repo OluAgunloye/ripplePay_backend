@@ -73,13 +73,22 @@ RippledServer.prototype.getServerInfo = async(function(){
 RippledServer.prototype.getTransactions = async(function(address) {
   await(this.api.connect());
   const serverInfo = await(this.api.getServerInfo());
+  // console.log(serverInfo);
   const completeLedgers = serverInfo.completeLedgers.match(/\d+/g);
+  // console.log(completeLedgers);
   const minLedgerVersion = parseInt(completeLedgers[0]);
-  const maxLedgerVersion = parseInt(completeLedgers[1]);
-  console.log(minLedgerVersion, maxLedgerVersion);
+  const maxLedgerVersion = parseInt(completeLedgers[completeLedgers.length-1]);
+  // console.log(minLedgerVersion, maxLedgerVersion);
   
   const transactions = await(this.api.getTransactions(address, { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"]}));
   return transactions;
+});
+
+RippledServer.prototype.getTrustlines = async(function(address) {
+  await(this.api.connect());
+  const trustLines = await(this.api.getTrustlines(address));
+  console.log(trustLines);
+  return trustLines
 });
 
 RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
@@ -129,5 +138,7 @@ module.exports = RippledServer;
 
 // ripple.getServerInfo();
 // ripple.getTransactions("r9bxkP88S17EudmfbgdZsegEaaM76pHiW6");
+// ripple.api.getTrustlines()
+// ripple.getTrustlines("raa6pjF59F5DrFLcpbTVskjSVGnbWTYMXL")
 
 // Run node rippleAPI.js to run this file for testing
