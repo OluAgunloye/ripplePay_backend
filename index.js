@@ -12,6 +12,8 @@ mongoose.Promise = global.Promise;
 // setup redis
 var redis = require("redis");
 let bluebird = require('bluebird');
+const rateLimit = require('./services/rateLimit');
+
 bluebird.promisifyAll(redis.RedisClient.prototype);
 
 let client;
@@ -38,6 +40,8 @@ if (process.env.NODE_ENV=='production') {
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(bodyParser.json());
+
+app.use('/v1', rateLimit.apiLimiter);
 // make token through middleware for everything except signup, which must create user first.
 app.use(/^(?!\/v1\/(signup))/, mung.json(
   function transform(body, req, res) {
