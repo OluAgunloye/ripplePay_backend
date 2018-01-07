@@ -255,7 +255,7 @@ exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lt': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
   // remove the first since that will have already been counted.
   nextTransactions = nextTransactions.slice(1);
   const shouldLoadMoreTransactions = nextTransactions.length >= TXN_LIMIT ? true : false;

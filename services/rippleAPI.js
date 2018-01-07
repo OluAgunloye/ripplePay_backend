@@ -94,7 +94,7 @@ RippledServer.prototype.getTrustlines = async(function(address) {
 RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddress, value, sourceTag, destTag, userId) {
   await(this.api.connect());
   const paymentObject = this.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
-  const txnInfo = await(this.api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 1000 }));
+  const txnInfo = await(this.api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 250 }));
 
   if (userId) {
     await (Redis.setInCache("prepared-transaction", userId, txnInfo));
