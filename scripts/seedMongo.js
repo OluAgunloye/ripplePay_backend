@@ -14,7 +14,7 @@ if (process.env.NODE_ENV == 'production') {
   mongoose.connect(process.env.MONGO_URL);
 } 
 else if (process.env.NODE_ENV == "seed-production") {
-  mongoose.connect(require('../configs/config').MONGO_URL);
+  mongoose.connect(require('../configs/config').MONGO_URL, { useMongoClient: true });
 }
 else {
   mongoose.connect('mongodb://localhost:ripplePay/ripplePay');
