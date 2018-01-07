@@ -4,22 +4,23 @@ const fs = Promise.promisifyAll(require('fs'));
 const async = require('asyncawait/async');
 const await = require('asyncawait/await');
 
-const MAX_CHARS = 8;
-const MIN_CHARS = 25;
+const MAX_CHARS = 25;
+const MIN_CHARS = 8;
 
 const ERROR_MAP = {
-    'oneOf': 'password too weak',
+    'oneOf': 'too weak',
     'spaces': 'contains spaces',
-    'min': `less than ${MIN_CHARS} characters`,
-    'max': `more than ${MAX_CHARS} characters`,
+    'min': `needs more than ${MIN_CHARS} characters`,
+    'max': `use less than ${MAX_CHARS} characters`,
     'uppercase': 'must have an uppercase character',
     'lowercase': 'must have a lowercase character',
     'digits': 'must have a digit character',
 };
 
 exports.validatePassword = async(function(password) {
-    const file = await(fs.readFileAsync('../references/10k_most_common.txt'));
+    const file = await(fs.readFileAsync('./references/commonPasswords.txt'));
     const commonPasswords = file.toString().split('\r\n');
+
     var schema = new passwordValidator();
     
     // Add properties to it
@@ -37,6 +38,6 @@ exports.validatePassword = async(function(password) {
         return null;
     }
     return failedSpecs.map((failedSpec) => {
-        return ERROR_MAP[failedSpec];
+        return `Password: ${ERROR_MAP[failedSpec]}`;
     });
 });

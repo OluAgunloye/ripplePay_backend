@@ -30,12 +30,12 @@ client.on("error", function (err) {
 global.RedisCache = client;
 
 var router = require('./services/router');
-const { tokenForUser } = require('./services/token');
+const Token = require('./services/token');
 
 if (process.env.NODE_ENV=='production') {
-  mongoose.connect(process.env.MONGO_URL);
+  mongoose.connect(process.env.MONGO_URL, { userMongoClient: true });
 } else {
-  mongoose.connect('mongodb://localhost:ripplePay/ripplePay');
+  mongoose.connect('mongodb://localhost/ripplePay', { useMongoClient: true });
 }
 app.use(helmet());
 app.use(morgan('combined'));
@@ -45,7 +45,7 @@ app.use('/v1', rateLimit.apiLimiter);
 // make token through middleware for everything except signup, which must create user first.
 app.use(/^(?!\/v1\/(signup))/, mung.json(
   function transform(body, req, res) {
-    body.token = tokenForUser(req.user);
+    body.token = Token.tokenForUser(req.user);
     return body;
   }
 ));

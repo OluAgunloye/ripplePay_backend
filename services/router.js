@@ -17,7 +17,7 @@ let router = require('express').Router();
 // Auth Routes`
 // -----------------------------------------------------------------------------
 router.route('/signup')
-  .post([rateLimit.userCreateLimiter, AuthenticationController.signup]);
+  .post([AuthenticationController.signup]);
 router.route('/signin')
   .post([rateLimit.loginLimiter, requireLogin, AuthenticationController.signin]);
 router.route('/authUrl')
