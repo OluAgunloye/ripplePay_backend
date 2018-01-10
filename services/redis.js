@@ -41,7 +41,9 @@ exports.findFromCacheUpdateString = asynchronous(function(key, userId, callback)
   }
 });
 
-exports.removeFromCache = asynchronous(function(key, userId) {
+exports.removeFromCache = function(key, userId) {
   const userKey = moddedKey(key, userId);
-  await (RedisCache.delAsync(userKey));
-});
+  RedisCache.delAsync(userKey).then((res) => {
+    console.log(res);
+  });
+};

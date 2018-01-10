@@ -1,5 +1,8 @@
 const User = require('../models/user');
 const { tokenForUser } = require('../services/token');
+const async = require('asyncawait/async');
+const await = require('asyncawait/await');
+const passwordValidator = require('../services/passwordValidator');
 
 exports.signin = function(req, res) {
   let user = req.user;
@@ -23,9 +26,16 @@ exports.comparePassword = function(req, res, next) {
   });
 };
 
-exports.signup = function(req, res, next) {
+exports.signup = async(function(req, res, next) {
   let email = req.body.email;
   let password = req.body.password;
+
+  let passwordValidationFailures = await(passwordValidator.validatePassword(password));
+
+  if (passwordValidationFailures) {
+    return res.status(422).json({ error: passwordValidationFailures });
+  }
+
   let screenName = req.body.screenName;
   if (!email || !password || !screenName) {
     return res.status(422).json({error: "You must provide an email, password & screen name"});
@@ -33,7 +43,7 @@ exports.signup = function(req, res, next) {
 
   User.findOne({email: email}, function(err, existingUser) {
     if (err) { return next(err); }
-    if (existingUser) {return res.status(422).json({error: "Email taken"})}
+    if (existingUser) {return res.status(422).json({error: "Email taken"});}
     let user = new User({
       email: email,
       password: password,
@@ -44,7 +54,7 @@ exports.signup = function(req, res, next) {
       res.json({token: tokenForUser(user)});
     });
   });
-};
+});
 
 exports.search = function (req, res, next) {
   const currentUser = req.user;
