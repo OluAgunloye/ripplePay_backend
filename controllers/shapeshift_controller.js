@@ -30,16 +30,16 @@ exports.createShapeshiftTransaction = asynchronous (function(req, res, next) {
   shapeShiftTransaction.save(function(err) {
     if (err) { return next(err); }
   })
-  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.push(shapeshift));
+  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.unshift(shapeshift));
   return res.json({});
 })
 
 exports.getShapeshiftTransactions = asynchronous (function(req, res, next) {
   let existingUser = req.user;
   let userId = existingUser._id;
-  let cacheVal = await (Redis.getFromTheCache("shapeshift-transactions", userId));
-  if (cacheVal) {
-    return res.json({shapeshiftTransactions: cacheVal});
+  let cachedShapeShiftTransactions = await (Redis.getFromTheCache("shapeshift-transactions", userId));
+  if (cachedShapeShiftTransactions) {
+    return res.json({ shapeshiftTransactions: cachedShapeShiftTransactions });
   }
   const shapeshiftTransactions = await (ShapeShiftTransaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
   Redis.setInCache("shapeshift-transactions", userId, shapeshiftTransactions);
@@ -50,10 +50,10 @@ exports.loadNextShapeShiftTransactions = asynchronous(function (req, res, next) 
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  let nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  let nextShapeShiftTransactions = await(ShapeShiftTransaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT+1));
   // remove the first transaction because that will already have been counted
   nextShapeShiftTransactions = nextShapeShiftTransactions.slice(1);
-  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.unshift(...nextShapeShiftTransactions));
+  Redis.findFromAndUpdateCache("shapeshift-transactions", userId, (val) => val.push(...nextShapeShiftTransactions));
   const shouldLoadMoreShapeShiftTransactions = nextShapeShiftTransactions.length >= TXN_LIMIT ? true : false;
   res.json({ nextShapeShiftTransactions, shouldLoadMoreShapeShiftTransactions });
 });
@@ -63,12 +63,11 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   const userId = existingUser._id;
 
   let query = req.query;
-  let shapeShiftAddress = query['0'];
-  let date = query['1'];
-  let fromAddress = query['2'];
+  let [ shapeShiftAddress, date, fromAddress ] = query;
+
   const shapeShiftTransaction = await (ShapeShiftTransaction.findOne({ userId, date, shapeShiftAddress }));
 
-  if (shapeShiftTransaction.txnId) {
+  if ( shapeShiftTransaction.txnId ) {
     return res.json({ txnId: shapeShiftTransaction.txnId });
   }
   // if i don't have txnId for this shapeshift transaction, I will go to ripple ledger to find it.

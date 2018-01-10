@@ -3,7 +3,7 @@ const { RippleAPI } = require('ripple-lib');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 const Redis = require('../services/redis');
-const { CashRegister, Money, BANK_NAME } = require('../models/moneyStorage');
+const { Money, BANK_NAME } = require('../models/moneyStorage');
 
 // This is the min ledger version that personal rippled server has from beginning of its time.
 exports.MIN_LEDGER_VERSION = 35550104;
@@ -122,13 +122,21 @@ RippledServer.prototype.signAndSend = async(function(address, secret, userId, tx
   const txnBlob = signature.signedTransaction;
 
   if (senderIsUser(userId)) {
-    await(Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }));  
+    Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }, function(err, doc) {
+      if (err) {
+        console.log(err, "error updating money!"); 
+      }
+    });  
   } else {
-    await(Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } })); 
+    Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } }, function(err, doc) {
+      if (err) {
+        console.log(err, "error updating money!");   
+      }
+    }); 
   }
 
   const result = await(this.api.submit(txnBlob));
-  await (Redis.removeFromCache("prepared-transaction", userId));
+  Redis.removeFromCache("prepared-transaction", userId);
   return result;
 });
 
