@@ -63,7 +63,10 @@ exports.getShapeshiftTransactionId = asynchronous (function(req, res, next) {
   const userId = existingUser._id;
 
   let query = req.query;
-  let [ shapeShiftAddress, date, fromAddress ] = query;
+
+  let shapeShiftAddress = query[0];
+  let date = query[1];
+  let fromAddress = query[2];
 
   const shapeShiftTransaction = await (ShapeShiftTransaction.findOne({ userId, date, shapeShiftAddress }));
 
