@@ -56,9 +56,18 @@ exports.inBankSend = asynchronous(function(req, res, next){
 
     await (User.update({ _id: senderId}, { '$set': senderBal }));
     await (User.update({ _id: receiverId }, { '$set': receiverBal }));
-    await (senderTransaction.save());
-    await (receiverTransaction.save());
 
+    senderTransaction.save(function(err) {
+      if (err) {
+        console.log(err, "saving sender transaction failed!");
+      }
+    });
+    receiverTransaction.save(function(err) {
+      if (err) {
+        console.log(err, "saving receiver transaction failed!");
+      }
+    });
+    
     res.json({message: "Payment was Successful", balance: senderBal.balance});
   }
   else {
@@ -150,7 +159,11 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   const userId = existingUser._id;
   if (existingUser.cashRegister) {
     const registerBalance = await (rippledServer.getBalance(existingUser.cashRegister));
-    await (CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: registerBalance }, {upsert: false}));
+    CashRegister.findOneAndUpdate({ address: existingUser.cashRegister }, { balance: registerBalance }, {upsert: false}, function(err, doc) {
+      if (err) {
+        console.log(err, "updating cash register failed!");
+      }
+    });
     const transactions = await (rippledServer.getTransactions(existingUser.cashRegister));
     // console.log(txnInfo);
     let userObject = {
@@ -163,7 +176,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
     const userAddress = existingUser.cashRegister;
     let userTransactions = [];
 
-    const processTransaction = asynchronous(function(currTxn, setLastTransaction, stopIteration) {
+    const processTransaction = function(currTxn, setLastTransaction, stopIteration) {
 
       const destAddress = currTxn.specification.destination.address;
       const destTag = currTxn.specification.destination.tag;
@@ -212,17 +225,21 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             amount: balanceChange,
             otherParty: counterParty
           });
-          await(newTxn.save());
+          newTxn.save(function(err) {
+            if (err) {
+              console.log(err, "saving new transaction failed!");
+            }
+          });
         }
       }
       return [setLastTransaction, stopIteration];
-    });
+    };
     // map over transactions asynchronously
     let setLastTransaction = true;
     let stopIteration = false;
     // Stop at a user's last transaction ID and reset the last TID.
     async.mapSeries(transactions, asynchronous(function (currTxn, cb) {
-      [setLastTransaction, stopIteration] = await(processTransaction(currTxn, setLastTransaction, stopIteration));
+      [setLastTransaction, stopIteration] = processTransaction(currTxn, setLastTransaction, stopIteration);
       if ( !stopIteration )
       {
         cb(null, currTxn);
@@ -255,7 +272,7 @@ exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lt': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT));
+  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT+1));
   // remove the first since that will have already been counted.
   nextTransactions = nextTransactions.slice(1);
   const shouldLoadMoreTransactions = nextTransactions.length >= TXN_LIMIT ? true : false;

@@ -7,6 +7,7 @@ const AuthenticationController = require('../controllers/authentication_controll
 const BankController = require('../controllers/banks_controller');
 const WalletController = require('../controllers/wallets_controller');
 const ShapeshiftController = require('../controllers/shapeshift_controller');
+const rateLimit = require('./rateLimit');
 // the following will take passport and will make some requirements on it
 const passportService = require('./passport');
 
@@ -16,9 +17,9 @@ let router = require('express').Router();
 // Auth Routes`
 // -----------------------------------------------------------------------------
 router.route('/signup')
-  .post(AuthenticationController.signup);
+  .post([rateLimit.userCreateLimiter, AuthenticationController.signup]);
 router.route('/signin')
-  .post([requireLogin, AuthenticationController.signin]);
+  .post([rateLimit.loginLimiter, requireLogin, AuthenticationController.signin]);
 router.route('/authUrl')
   .post(requireAuth, AuthenticationController.comparePassword);
   router.route('/search')
@@ -30,7 +31,7 @@ router.route('/send')
 router.route('/payment')
   .post(requireAuth, BankController.preparePayment);
 router.route('/transactions')
-  .get(requireAuth, BankController.getTransactions);
+  .get(rateLimit.ledgerLookupLimiter, requireAuth, BankController.getTransactions);
 router.route('/nextTransactions')
   .get(requireAuth, BankController.loadNextTransactions);
   
@@ -53,7 +54,7 @@ router.route('/nextTransactions')
   router.route('/nextShapeShiftTransactions')
     .get(requireAuth, ShapeshiftController.loadNextShapeShiftTransactions);
   router.route('/getShapeId')
-  .get(requireAuth, ShapeshiftController.getShapeshiftTransactionId);
+    .get(rateLimit.ledgerLookupLimiter, requireAuth, ShapeshiftController.getShapeshiftTransactionId);
 
 // xxx Routes
 // -----------------------------------------------------------------------------
