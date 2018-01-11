@@ -74,13 +74,17 @@ RippledServer.prototype.getTransactions = async(function(address) {
   await(this.api.connect());
   const serverInfo = await(this.api.getServerInfo());
   // console.log(serverInfo);
-  const completeLedgers = serverInfo.completeLedgers.match(/\d+/g);
-  // console.log(completeLedgers);
-  const minLedgerVersion = parseInt(completeLedgers[0]);
-  const maxLedgerVersion = parseInt(completeLedgers[completeLedgers.length-1]);
-  // console.log(minLedgerVersion, maxLedgerVersion);
+  const completeLedgers = serverInfo.completeLedgers.match(/(\d+)\-(\d+)/g);
+  const transactions = [];
   
-  const transactions = await(this.api.getTransactions(address, { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"]}));
+  completeLedgers.forEach((combo) => {
+    const minMax = combo.match(/\d+/g);
+    const minLedgerVersion = parseInt(minMax[0]);
+    const maxLedgerVersion = parseInt(minMax[1]);
+    const nextTransactions = await(this.api.getTransactions(address, { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"]}));
+    transactions.push(...nextTransactions);
+  });
+  // console.log(minLedgerVersion, maxLedgerVersion);
   return transactions;
 });
 
