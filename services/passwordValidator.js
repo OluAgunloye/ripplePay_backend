@@ -1,6 +1,7 @@
 const passwordValidator = require('password-validator');
-const Promise = require('bluebird');
-const fs = Promise.promisifyAll(require('fs'));
+let schema = new passwordValidator();
+
+const fs = require('fs');
 const async = require('asyncawait/async');
 const await = require('asyncawait/await');
 
@@ -8,7 +9,7 @@ const MAX_CHARS = 25;
 const MIN_CHARS = 8;
 
 const ERROR_MAP = {
-    'oneOf': 'too weak',
+    'common': 'too common',
     'spaces': 'contains spaces',
     'min': `needs more than ${MIN_CHARS} characters`,
     'max': `use less than ${MAX_CHARS} characters`,
@@ -17,12 +18,15 @@ const ERROR_MAP = {
     'digits': 'must have a digit character',
 };
 
-exports.validatePassword = async(function(password) {
-    const file = await(fs.readFileAsync('./references/commonPasswords.txt'));
-    const commonPasswords = file.toString().split('\r\n');
+const commonPasswords = fs.readFileSync('./references/commonPasswords.txt').toString().split('\r\n');
 
-    var schema = new passwordValidator();
-    
+const COMMON_PASSWORDS_DICTIONARY = {};
+
+commonPasswords.forEach((password) => {
+  COMMON_PASSWORDS_DICTIONARY[password] = true;
+});
+
+exports.validatePassword = async(function(password) {
     // Add properties to it
     schema
         .is().min(MIN_CHARS)                                    // Minimum length 8
@@ -31,9 +35,14 @@ exports.validatePassword = async(function(password) {
         .has().lowercase()                              // Must have lowercase letters
         .has().digits()                                 // Must have digits
         .has().not().spaces()                           // Should not have spaces
-        .is().not().oneOf(commonPasswords); // Blacklist these values
     
     const failedSpecs = schema.validate(password, { list: true });
+    const isTooCommon = COMMON_PASSWORDS_DICTIONARY[password];
+
+    if (isTooCommon) {
+        failedSpecs.push('common');
+    }
+
     if (failedSpecs.length === 0) {
         return null;
     }
