@@ -1,9 +1,6 @@
-// We can use our URL's to the backend and then make promises that will start controller actions.
-// Go to authenticationController next.
-
 const passport = require('passport');
 
-const AuthenticationController = require('../controllers/authentication_controller');
+const UserController = require('../controllers/user_controller');
 const BankController = require('../controllers/banks_controller');
 const WalletController = require('../controllers/wallets_controller');
 const ShapeshiftController = require('../controllers/shapeshift_controller');
@@ -17,13 +14,13 @@ let router = require('express').Router();
 // Auth Routes`
 // -----------------------------------------------------------------------------
 router.route('/signup')
-  .post([rateLimit.userCreateLimiter, AuthenticationController.signup]);
+  .post([rateLimit.userCreateLimiter, UserController.signup]);
 router.route('/signin')
-  .post([rateLimit.loginLimiter, requireLogin, AuthenticationController.signin]);
+  .post([rateLimit.loginLimiter, requireLogin, UserController.signin]);
 router.route('/authUrl')
-  .post(requireAuth, AuthenticationController.comparePassword);
+  .post(requireAuth, UserController.comparePassword);
   router.route('/search')
-    .get(requireAuth, AuthenticationController.search);
+    .get(requireAuth, UserController.search);
 router.route('/banksend')
   .post(requireAuth, BankController.inBankSend);
 router.route('/send')

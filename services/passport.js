@@ -24,7 +24,6 @@ let localStrategy = new LocalStrategy(localOptions, function(email, password, do
       if (error) { return done(error); }
       if (!isMatch) { return done("Wrong email/password combination"); }
       // after this is done, returning the following will return the user object to
-      // the authentication controller signin method.
       return done(null, user);
     });
   });
