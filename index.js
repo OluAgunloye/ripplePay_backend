@@ -28,6 +28,7 @@ if (process.env.NODE_ENV=='production') {
 client.on("error", function (err) {
   console.log("Error " + err);
 });
+
 global.RedisCache = client;
 
 var router = require('./services/router');
@@ -38,13 +39,17 @@ if (process.env.NODE_ENV=='production') {
 } else {
   mongoose.connect('mongodb://localhost/ripplePay', { useMongoClient: true });
 }
+// Apply Middlewares
 app.use(helmet());
+
 app.use(csp({
   directives: {
     defaultSrc: ["'self'"],
   }
 }));
+
 app.use(morgan('combined'));
+
 app.use(bodyParser.json());
 
 app.use('/v1', rateLimit.apiLimiter);
@@ -55,6 +60,7 @@ app.use(/^(?!\/v1\/(signup))/, mung.json(
     return body;
   }
 ));
+
 app.use('/v1', router);
 // Disabling etag will mess up caching mechanisms
 // app.disable('etag');

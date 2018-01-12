@@ -24,9 +24,11 @@ exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
   let sender = req.user;
   let senderId = sender._id;
+
   if ( amount > sender.balance ) {
     return res.json({message: "Balance Insufficient", balance: sender.balance});
   }
+  
   let receiver = await (User.findOne({ screenName: receiverScreenName}));
   let receiverId = receiver._id;
   if ( sender && receiver ) {
@@ -79,6 +81,7 @@ exports.preparePayment = asynchronous(function(req, res, next) {
   let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
   let existingUser = req.user;
   let userId = existingUser._id;
+
   if (amount > existingUser.balance) {
     res.json({ message: "Balance Insufficient" });
     return;
@@ -103,6 +106,11 @@ exports.signAndSend = asynchronous (function(req, res, next){
   const { fromAddress, amount } = req.body;
   const existingUser = req.user;
   const userId = existingUser._id;
+
+  if (amount > existingUser.balance) {
+    res.json({ message: "Balance Insufficient" });
+    return;
+  }
 
   const registerAddress = fromAddress;
   const registerBalance = await(rippledServer.getBalance(registerAddress));

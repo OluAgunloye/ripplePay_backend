@@ -50,8 +50,7 @@ exports.findOldAddress = asynchronous(function(req, res, next){
   let userId = existingUser._id;
   res.json({cashRegister: existingUser.cashRegister});
 })
-// this can be done so much easier just by using Mongocollections
-// CashRegister.find()
+
 exports.generateRegister = asynchronous(function(req, res, next){
   const existingUser = req.user;
   if (existingUser.wallets.length === 5) {
