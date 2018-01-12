@@ -29,6 +29,6 @@ exports.ledgerLookupLimiter = new RateLimit({
     windowMs: 5 * 60 * 1000, // 5 minute window
     delayAfter: 20, // begin slowing down responses after the fifteenth request
     delayMs: 3 * 1000, // slow down subsequent responses by 3 second per request
-    max: 30, // start blocking after 30 requests
+    max: 40, // start blocking after 30 requests
     message: "Too many requests. Try again in 5 minutes."
 });
