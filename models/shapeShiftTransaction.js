@@ -18,10 +18,10 @@ const shapeShiftTransactionSchema = new Schema({
         type: String
     },
     from: {
-        type: String
+        type: Object
     },
     to: {
-        type: String
+        type: Object
     },
     refundAddress: {
         type: String

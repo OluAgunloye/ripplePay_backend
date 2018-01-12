@@ -29,7 +29,11 @@ exports.inBankSend = asynchronous(function(req, res, next){
     return res.json({message: "Balance Insufficient", balance: sender.balance});
   }
   
-  let receiver = await (User.findOne({ screenName: receiverScreenName}));
+  if (amount <= 0) {
+    return res.json({message: "Cant send 0 or less XRP"})
+  }
+
+  let receiver = await (User.findOne({ screenName: receiverScreenName }));
   let receiverId = receiver._id;
   if ( sender && receiver ) {
     let trTime = new Date().getTime();
@@ -83,8 +87,11 @@ exports.preparePayment = asynchronous(function(req, res, next) {
   let userId = existingUser._id;
 
   if (amount > existingUser.balance) {
-    res.json({ message: "Balance Insufficient" });
-    return;
+    return res.json({ message: "Balance Insufficient" });
+  }
+
+  if (amount <= 0) {
+    return res.json({ message: "Cant send 0 or less XRP"});
   }
 
   const masterKey = await(Decryption.getMasterKey());
@@ -110,6 +117,10 @@ exports.signAndSend = asynchronous (function(req, res, next){
   if (amount > existingUser.balance) {
     res.json({ message: "Balance Insufficient" });
     return;
+  }
+
+  if (amount <= 0) {
+    return res.json({ message: "Cant send 0 or less XRP" });
   }
 
   const registerAddress = fromAddress;
