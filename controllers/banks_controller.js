@@ -36,11 +36,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
   let receiver = await (User.findOne({ screenName: receiverScreenName }));
   let receiverId = receiver._id;
   if ( sender && receiver ) {
+    
     let trTime = new Date().getTime();
-
-    let senderBal = {
-      balance: sender.balance - amount
-    };
 
     let senderTransaction = new Transaction({
       userId: senderId,
@@ -49,10 +46,6 @@ exports.inBankSend = asynchronous(function(req, res, next){
       otherParty: receiver.screenName
     });
 
-    let receiverBal = {
-      balance: receiver.balance + amount
-    };
-
     let receiverTransaction = new Transaction({
       userId: receiverId,
       date: trTime,
@@ -60,8 +53,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
       otherParty: sender.screenName
     });
 
-    await (User.update({ _id: senderId}, { '$set': senderBal }));
-    await (User.update({ _id: receiverId }, { '$set': receiverBal }));
+    let updatedSender = await(User.findOneAndUpdate({ _id: senderId }, { '$inc': { balance: -amount } }, { returnNewDocument: true }));
+    await (User.findOneAndUpdate({ _id: receiverId }, { '$inc': { balance: amount } }));
 
     senderTransaction.save(function(err) {
       if (err) {
@@ -74,7 +67,7 @@ exports.inBankSend = asynchronous(function(req, res, next){
       }
     });
     
-    res.json({message: "Payment was Successful", balance: senderBal.balance});
+    res.json({message: "Payment was Successful", balance: updatedSender.balance});
   }
   else {
     res.json({message: "Payment Unsuccessful"});
@@ -185,9 +178,8 @@ exports.getTransactions = asynchronous(function (req, res, next) {
     });
     const transactions = await (rippledServer.getTransactions(existingUser.cashRegister));
     // console.log(txnInfo);
-    let userObject = {
-      _id: existingUser._id,
-      balance: existingUser.balance,
+    let userChanges = {
+      balance: 0,
       lastTransactionId: null
     };
 
@@ -207,7 +199,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
       if ( (destTagIdx !== -1 && destAddress === userAddress) || (sourceTagIdx !== -1 && sourceAddress === userAddress) ) {
         if ( setLastTransaction )
         {
-          userObject.lastTransactionId = currTxn.id;
+          userChanges.lastTransactionId = currTxn.id;
           setLastTransaction = false;
         }
         if (currTxn.id === existingUser.lastTransactionId) {
@@ -233,7 +225,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
           balanceChange -= 0.02;
         }
         // apply ripple ledger fee
-        userObject.balance += balanceChange;
+        userChanges.balance += balanceChange;
         // add to user transactions only if its a successful transaction
         if (currTxn.outcome.result === "tesSUCCESS") {
           let newTxn = new Transaction({
@@ -268,12 +260,16 @@ exports.getTransactions = asynchronous(function (req, res, next) {
       }
     }), function(error, resp) {
       userTransactions = await(Transaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
-      User.update({_id: existingUser._id}, userObject, function (err) {
-        if (err) { return next(err); }
-        res.json({
-          transactions: userTransactions,
-          balance: userObject.balance
-        });
+      let updatedUser = await(
+        User.findOneAndUpdate(
+          {_id: existingUser._id}, 
+          {'$set': { lastTransactionId: userChanges.lastTransactionId }, '$inc': { balance: userChanges.balance }},
+          { returnNewDocument: true } 
+        )
+      );
+      res.json({
+        transactions: userTransactions,
+        balance: updatedUser.balance
       });
     });
   }
