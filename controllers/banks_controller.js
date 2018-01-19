@@ -2,7 +2,7 @@ const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
 const User = require('../models/user');
-const { CashRegister, BANK_NAME } = require('../models/moneyStorage');
+const { CashRegister } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
@@ -19,6 +19,7 @@ if (process.env.NODE_ENV=='production') {
 }
 
 const TXN_LIMIT = 10;
+const MINIMUM_RIPPLE_ADDRESS_BALANCE = 20;
 
 exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
@@ -128,7 +129,6 @@ exports.signAndSend = asynchronous (function(req, res, next){
       const registerSecret = Decryption.decrypt(masterKey, encryptedRegisterSecret);
 
       const result = await(rippledServer.signAndSend(registerAddress, registerSecret, userId));
-
       if (result) {
         console.log(result);
         res.json({message: result.resultCode});
@@ -138,25 +138,11 @@ exports.signAndSend = asynchronous (function(req, res, next){
       }
 
   })
-  // STILL NEED TO FIX THIS FUNCTION WITH SOME KIND OF LEARNING ALGORITHM
-  let refillCashRegisterAndSend = asynchronous(function(){
-
-      const encryptedBankAddress = Object.keys(encryptedBank)[0];
-      const encryptedBankSecret = encryptedBank[encryptedBankAddress];
-      const bankAddress = Decryption.decrypt(masterKey, encryptedBankAddress);
-      const bankSecret = Decryption.decrypt(masterKey, encryptedBankSecret);
-      
-      // refilling by 20 for now until we find a better wallet refill algorithm
-      const txnInfo = await(rippledServer.getTransactionInfo(bankAddress, registerAddress, 20, 0, null, null));
-      const result = await(rippledServer.signAndSend(bankAddress, bankSecret, BANK_NAME, txnInfo));
-      console.log(result);
-      sendMoney();
-
-  })
 
   const amountToSend = amount;
-  if ( registerBalance - amountToSend < 20 ) {
-    refillCashRegisterAndSend();
+  // Cash register should never be empty if code reaches this point
+  if ( registerBalance - amountToSend < MINIMUM_RIPPLE_ADDRESS_BALANCE ) {
+    res.json({message: "Cash Register Empty Error. Please report this to ripplePay@gmail.com"});
   } else {
     sendMoney();
   }
@@ -223,6 +209,13 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         {
           // ripplePay fee for outgoing txn
           balanceChange -= 0.02;
+          const fee = currTxn.outcome.fee;
+
+          Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }, function (err, doc) {
+            if (err) {
+              console.log(err, "error updating money!");
+            }
+          });  
         }
         // apply ripple ledger fee
         userChanges.balance += balanceChange;

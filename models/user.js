@@ -41,6 +41,9 @@ var userSchema = new Schema({
   cashRegister: {
     type: String,
     default: ''
+  },
+  personalAddress: {
+    type: String
   }
 });
 

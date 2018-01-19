@@ -5,8 +5,6 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
 const async = require('async');
 
-exports.BANK_NAME = "ripplePay";
-
 let cashRegisterSchema = new Schema({
   address: {
     type: String
