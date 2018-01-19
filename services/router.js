@@ -49,8 +49,6 @@ router.route('/nextTransactions')
   
   router.route('/delwallet')
   .post([requireAPIKey, requireAuth, WalletController.deleteWallet]);
-  router.route('/delRegister')
-    .post(requireAPIKey, requireAuth, WalletController.removeCashRegister);
   router.route('/dest')
     .post(requireAPIKey, requireAuth, WalletController.receiveOnlyDesTag);
   router.route('/addrs')

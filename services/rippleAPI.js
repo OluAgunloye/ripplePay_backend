@@ -3,10 +3,10 @@ const { RippleAPI } = require('ripple-lib');
 let async = require('asyncawait/async');
 let await = require('asyncawait/await');
 const Redis = require('../services/redis');
-const { Money, BANK_NAME } = require('../models/moneyStorage');
+const { Money } = require('../models/moneyStorage');
 
 // This is the min ledger version that personal rippled server has from beginning of its time.
-exports.MIN_LEDGER_VERSION = 35550104;
+// exports.MIN_LEDGER_VERSION = 35550104;
 
 const RippledServer = function() {
   this.api = new RippleAPI({
@@ -106,18 +106,20 @@ RippledServer.prototype.getTransactionInfo = async(function(fromAddress, toAddre
   return txnInfo;
 });
 
-function senderIsUser(id) {
-  return id !== BANK_NAME;
-}
-
-RippledServer.prototype.signAndSend = async(function(address, secret, userId, txnInfo) {
+RippledServer.prototype.generateAddress = async(function(){
   await(this.api.connect());
 
-  if (senderIsUser(userId) && !txnInfo) {
-    txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
-    if (!txnInfo) {
-      return null;
-    }
+  const addressObject = await(this.api.generateAddress());  
+  return addressObject;
+});
+
+
+RippledServer.prototype.signAndSend = async(function(address, secret, userId) {
+  await(this.api.connect());
+
+  txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
+  if (!txnInfo) {
+    return null;
   }
   console.log(txnInfo);
 
@@ -125,29 +127,16 @@ RippledServer.prototype.signAndSend = async(function(address, secret, userId, tx
   const signature = this.api.sign(txnInfo.txJSON, secret);
   const txnBlob = signature.signedTransaction;
 
-  if (senderIsUser(userId)) {
-    Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }, function(err, doc) {
-      if (err) {
-        console.log(err, "error updating money!"); 
-      }
-    });  
-  } else {
-    Money.update({}, { '$inc': { cost: fee, revenue: 0, profit: -fee } }, function(err, doc) {
-      if (err) {
-        console.log(err, "error updating money!");   
-      }
-    }); 
-  }
-
   const result = await(this.api.submit(txnBlob));
   Redis.removeFromCache("prepared-transaction", userId);
+
   return result;
 });
 
 module.exports = RippledServer;
 
 // const ripple = new RippledServer();
-
+// ripple.generateAddress();
 // ripple.getServerInfo();
 // ripple.getTransactions("r9bxkP88S17EudmfbgdZsegEaaM76pHiW6");
 // ripple.api.getTrustlines()
