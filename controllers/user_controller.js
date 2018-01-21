@@ -9,7 +9,8 @@ exports.signin = function(req, res) {
   res.send({
     cashRegister: user.cashRegister,
     wallets: user.wallets,
-    screenName: user.screenName
+    screenName: user.screenName,
+    personalAddress: user.personalAddress
   });
 };
 

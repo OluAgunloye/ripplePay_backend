@@ -4,6 +4,7 @@ const UserController = require('../controllers/user_controller');
 const BankController = require('../controllers/banks_controller');
 const WalletController = require('../controllers/wallets_controller');
 const ShapeshiftController = require('../controllers/shapeshift_controller');
+const PersonalWalletController = require('../controllers/personal_wallet_controller');
 const rateLimit = require('./rateLimit');
 // the following will take passport and will make some requirements on it
 const passportService = require('./passport');
@@ -28,14 +29,17 @@ function requireAPIKey(req, res, next) {
 }
 // Auth Routes`
 // -----------------------------------------------------------------------------
+// USER CONTROLLER
 router.route('/signup')
   .post([requireAPIKey, rateLimit.userCreateLimiter, UserController.signup]);
 router.route('/signin')
   .post([requireAPIKey, rateLimit.loginLimiter, requireLogin, UserController.signin]);
 router.route('/authUrl')
   .post(requireAPIKey, requireAuth, UserController.comparePassword);
-  router.route('/search')
-    .get(requireAPIKey, requireAuth, UserController.search);
+router.route('/search')
+  .get(requireAPIKey, requireAuth, UserController.search);
+
+// BANK CONTROLLER
 router.route('/banksend')
   .post(requireAPIKey, requireAuth, BankController.inBankSend);
 router.route('/send')
@@ -47,6 +51,7 @@ router.route('/transactions')
 router.route('/nextTransactions')
   .get(requireAPIKey, requireAuth, BankController.loadNextTransactions);
   
+// WALLETS CONTROLLER
   router.route('/delwallet')
   .post([requireAPIKey, requireAuth, WalletController.deleteWallet]);
   router.route('/dest')
@@ -57,6 +62,20 @@ router.route('/nextTransactions')
   .get(requireAPIKey, requireAuth, WalletController.receiveAllWallets);
   router.route('/old')
     .get(requireAPIKey, requireAuth, WalletController.findOldAddress);
+
+// PERSONAL WALLET CONTROLLER
+  router.route('/personal')
+  .post([requireAPIKey, requireAuth, PersonalWalletController.generatePersonalAddress]);
+  router.route('/personaltrans')
+    .get(requireAPIKey, requireAuth, PersonalWalletController.getPersonalAddressTransactions);
+  router.route('/delpersonal')
+    .post(requireAPIKey, requireAuth, PersonalWalletController.removePersonalAddress);
+  router.route('/personalpayment')
+  .post(requireAPIKey, requireAuth, PersonalWalletController.preparePaymentWithPersonalAddress);
+  router.route('/sendpersonal')
+    .post(requireAPIKey, requireAuth, PersonalWalletController.sendPaymentWithPersonalAddress);
+
+// SHAPESHIFT CONTROLLER
   router.route('/makeshift')
     .post(requireAPIKey, requireAuth, ShapeshiftController.createShapeshiftTransaction);
   router.route('/getshifts')
@@ -66,11 +85,7 @@ router.route('/nextTransactions')
   router.route('/getShapeId')
     .get(requireAPIKey, rateLimit.ledgerLookupLimiter, requireAuth, ShapeshiftController.getShapeshiftTransactionId);
 
-// xxx Routes
-// -----------------------------------------------------------------------------
-// router.route('/protected')
-//   .get(requireAuth, protected);
 
-// Ripple API
+
 
 module.exports = router;

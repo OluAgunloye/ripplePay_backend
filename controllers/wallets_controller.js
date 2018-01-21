@@ -3,8 +3,8 @@ const { UsedWallet, CashRegister } = require('../models/moneyStorage');
 const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
-const RippledServer = require('../services/rippleAPI');
 let _ = require('lodash');
+const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 
 //Since there is a very low chance of a coincide, this shouldn't have to recurse at all
@@ -50,67 +50,6 @@ exports.findOldAddress = asynchronous(function(req, res, next){
   let userId = existingUser._id;
   res.json({cashRegister: existingUser.cashRegister});
 });
-
-exports.generatePersonalAddress = asynchronous(function(req, res, next) {
-  const personalAddressObject = await(rippledServer.generateAddress());
-  return res.json({ address: personalAddressObject.address, secret: personalAddressObject.secret })
-});
-
-exports.getPersonalAddressTransactions = asynchronous(function(req, res, next) {
-  const user = req.user;
-  if (!user.personalAddress) {
-    res.json({message: "user does not have a personal address!"})
-  }
-  const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress));
-  const personalAddressBalance = await(rippledServer.getBalance(user.personalAddress));
-  res.json({ personalAddressBalance, personalAddressTransactions });
-});
-
-exports.removePersonalAddress = asynchronous(function(req, res, next) {
-  const user = req.user;
-  user.personalAddress = null;
-  user.save(function(err) {
-    if (err) {
-      return next(err);
-    }
-    res.json({message: "Sucessfully removed personal address from ripplePay"});
-  });
-});
-
-exports.preparePaymentWithPersonalAddress = asynchronous(function(req, res, next) {
-  const user = req.user;
-  const userId = user._id;
-  const { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
-  if (amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP" });
-  }
-
-  const txnInfo = await(rippledServer.getTransactionInfo(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
-  const fee = txnInfo.instructions.fee;
-  res.json({
-    fee: txnInfo.instructions.fee
-  });
-});
-
-exports.sendPaymentWithPersonalAddress = asynchronous(function(req, res, next) {
-  const { fromAddress, secret, amount } = req.body;
-  const existingUser = req.user;
-  const userId = existingUser._id;
-
-  if (amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP" });
-  }
-
-  const result = await(rippledServer.signAndSend(fromAddress, secret, userId));
-  if (result) {
-    console.log(result);
-    res.json({ message: result.resultCode });
-  }
-  else {
-    res.json({ message: "Transaction Failed" });
-  }
-});
-
 
 exports.generateRegister = asynchronous(function(req, res, next){
   const existingUser = req.user;
