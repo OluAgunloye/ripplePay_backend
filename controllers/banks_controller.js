@@ -193,13 +193,15 @@ exports.getTransactions = asynchronous(function (req, res, next) {
           return [setLastTransaction, stopIteration];
         }
 
-        let counterParty, tag;
+        let counterParty, tag, counterPartyTag;
 
         if (destAddress === userAddress) {
           counterParty = sourceAddress;
+          counterPartyTag = sourceTag;
           tag = destTag;
         } else {
           counterParty = destAddress;
+          counterPartyTag = destTag;
           tag = sourceTag;
         }
 
@@ -227,7 +229,8 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             tag: tag,
             date: new Date(currTxn.outcome.timestamp).getTime(),
             amount: balanceChange,
-            otherParty: counterParty
+            otherParty: counterParty,
+            otherPartyTag: counterPartyTag
           });
           newTxn.save(function(err) {
             if (err) {

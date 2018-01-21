@@ -21,6 +21,9 @@ const transactionSchema = new Schema({
     },
     otherParty: {
         type: String
+    },
+    otherPartyTag: {
+        type: Number
     }
 });
 
