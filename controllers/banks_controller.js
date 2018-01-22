@@ -23,6 +23,7 @@ const MINIMUM_RIPPLE_ADDRESS_BALANCE = 20;
 
 exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
+  amount = parseFloat(amount);
   let sender = req.user;
   let senderId = sender._id;
 
@@ -77,6 +78,7 @@ exports.inBankSend = asynchronous(function(req, res, next){
 
 exports.preparePayment = asynchronous(function(req, res, next) {
   let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
+  amount = parseFloat(amount);
   let existingUser = req.user;
   let userId = existingUser._id;
 
@@ -104,7 +106,8 @@ exports.preparePayment = asynchronous(function(req, res, next) {
 })
 
 exports.signAndSend = asynchronous (function(req, res, next){
-  const { fromAddress, amount } = req.body;
+  let { fromAddress, amount } = req.body;
+  amount = parseFloat(amount);
   const existingUser = req.user;
   const userId = existingUser._id;
 

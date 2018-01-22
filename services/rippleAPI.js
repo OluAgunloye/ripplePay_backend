@@ -28,7 +28,6 @@ const RippledServer = function() {
 RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag, sourceTag, value){
   let source = {
     "address": fromAddress,
-    "tag": sourceTag,
     "maxAmount": {
       "value": `${value}`,
       "currency": "XRP"
@@ -42,6 +41,9 @@ RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag
     }
   };
 
+  if (sourceTag) {
+    source = Object.assign({}, source, { "tag": sourceTag });
+  }
 
   if (desTag) {
     destination = Object.assign({}, destination, {"tag": desTag});
@@ -53,8 +55,17 @@ RippledServer.prototype.preparePayment = function(fromAddress, toAddress, desTag
 
 RippledServer.prototype.getBalance = async(function(address) {
   await(this.api.connect());
-  const balInfo = await (this.api.getBalances(address));
-  // console.log(balInfo, "IT WORKED!!!");
+  let balInfo;
+  let error = null;
+  // Check if a new wallet has at least 20 balance.
+  try {
+    balInfo = await (this.api.getBalances(address));
+  } catch (err) {
+    error = err;
+  }
+  if (error) {
+    return 0;
+  }
   return balInfo[0] ? parseFloat(balInfo[0].value) : 0;
 });
 

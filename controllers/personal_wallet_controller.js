@@ -24,8 +24,11 @@ exports.getPersonalAddressTransactions = asynchronous(function (req, res, next) 
     if (!user.personalAddress) {
         return res.json({ message: "user does not have a personal address!" });
     }
-    const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress));
     const personalAddressBalance = await(rippledServer.getBalance(user.personalAddress));
+    if (personalAddressBalance === 0) {
+        return res.json({message: "New XRP wallets require 20 XRP!"});
+    }
+    const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress));
     res.json({ 
         personalAddress: user.personalAddress, 
         personalAddressBalance, 
@@ -79,4 +82,32 @@ exports.sendPaymentWithPersonalAddress = asynchronous(function (req, res, next) 
     else {
         res.json({ message: "Transaction Failed" });
     }
+});
+
+exports.prepareTransactionPersonalToBank = asynchronous(function (req, res, next) {
+    let { amount, fromAddress, toScreenName } = req.body;
+    amount = parseFloat(amount);
+    const sender = req.user;
+    const senderId = sender._id;
+    
+    if (amount > sender.balance) {
+        return res.json({ message: "Balance Insufficient" });
+    }
+    if (amount <= 0) {
+        return res.json({ message: "Cant send 0 or less XRP" });
+    }
+    const receiver = await(User.findOne({ screenName: toScreenName }));
+    if (!receiver.cashRegister || receiver.wallets.length === 0) {
+        return res.json({ message: "Receiver has no bank wallet!"});
+    }
+
+    const toDesTag = receiver.wallets[receiver.wallets.length - 1];
+    const toAddress = receiver.cashRegister;
+    const txnInfo = await(rippledServer.getTransactionInfo(fromAddress, toAddress, amount, null, toDesTag, senderId));
+    const fee = txnInfo.instructions.fee;
+    res.json({
+        fee: txnInfo.instructions.fee,
+        toAddress,
+        toDesTag
+    });
 });
