@@ -74,6 +74,8 @@ router.route('/nextTransactions')
   .post(requireAPIKey, requireAuth, PersonalWalletController.preparePaymentWithPersonalAddress);
   router.route('/sendpersonal')
     .post(requireAPIKey, requireAuth, PersonalWalletController.sendPaymentWithPersonalAddress);
+  router.route('/preparePersonalToBank')
+    .post(requireAPIKey, requireAuth, PersonalWalletController.prepareTransactionPersonalToBank);
 
 // SHAPESHIFT CONTROLLER
   router.route('/makeshift')
