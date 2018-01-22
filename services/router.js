@@ -22,6 +22,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 function requireAPIKey(req, res, next) {
+  console.log(req.headers.apikey, apiKey);
+  
   if (req.headers.apikey !== apiKey) {
     throw "Invalid API Key";
   }
