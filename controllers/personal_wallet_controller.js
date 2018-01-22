@@ -3,6 +3,7 @@ const await = require('asyncawait/await');
 const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 const { Money } = require('../models/moneyStorage');
+const User = require('../models/user');
 
 exports.generatePersonalAddress = asynchronous(function (req, res, next) {
     const personalAddressObject = await(rippledServer.generateAddress());
