@@ -35,7 +35,7 @@ var router = require('./services/router');
 const Token = require('./services/token');
 
 if (process.env.NODE_ENV=='production') {
-  mongoose.connect(process.env.MONGO_URL, { userMongoClient: true });
+  mongoose.connect(process.env.MONGO_URL, { useMongoClient: true });
 } else {
   mongoose.connect('mongodb://localhost/ripplePay', { useMongoClient: true });
 }
