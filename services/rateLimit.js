@@ -11,9 +11,9 @@ exports.apiLimiter = new RateLimit({
 
 exports.loginLimiter = new RateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour window
-    delayAfter: 3, // begin slowing down responses after the third request
+    delayAfter: 6, // begin slowing down responses after the third request
     delayMs: 3 * 60 * 1000, // slow down subsequent responses by 3 minutes per request
-    max: 5, // start blocking after 5 requests
+    max: 10, // start blocking after 10 requests
     message: "Too many failed login attempts. Try again in an hour."
 });
 
@@ -31,4 +31,12 @@ exports.ledgerLookupLimiter = new RateLimit({
     delayMs: 3 * 1000, // slow down subsequent responses by 3 second per request
     max: 40, // start blocking after 30 requests
     message: "Too many requests. Try again in 5 minutes."
+});
+
+exports.changePasswordLimiter = new RateLimit({
+    windowMs: 30 * 60 * 1000, // 30 minute window
+    delayAfter: 3, // begin slowing down responses after the third request
+    delayMs: 3 * 1000, // slow down subsequent responses by 3 second per request
+    max: 6, // start blocking after 6 requests
+    message: "Change Password called too many times. Try again after 30 minutes"
 });
