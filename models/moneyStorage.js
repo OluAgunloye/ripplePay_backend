@@ -1,9 +1,9 @@
 const express = require('express');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
 const async = require('async');
+const Schema = mongoose.Schema;
 
 let cashRegisterSchema = new Schema({
   address: {
