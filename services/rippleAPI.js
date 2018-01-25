@@ -82,20 +82,29 @@ RippledServer.prototype.getServerInfo = async(function(){
   return serverInfo;
 });
 
-RippledServer.prototype.getTransactions = async(function(address) {
+RippledServer.prototype.getTransactions = async(function(address, limit) {
   await(this.api.connect());
   const serverInfo = await(this.api.getServerInfo());
   // console.log(serverInfo);
-  const completeLedgers = serverInfo.completeLedgers.match(/(\d+)\-(\d+)/g);
+  // do newest to oldest by reversing.
+  const completeLedgers = serverInfo.completeLedgers.match(/(\d+)\-(\d+)/g).reverse();
   const transactions = [];
-  
-  completeLedgers.forEach((combo) => {
-    const minMax = combo.match(/\d+/g);
-    const minLedgerVersion = parseInt(minMax[0]);
-    const maxLedgerVersion = parseInt(minMax[1]);
-    const nextTransactions = await(this.api.getTransactions(address, { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"]}));
+  let combo, query, minMax, nextTransactions, minLedgerVersion, maxLedgerVersion;
+  for (let i = 0; i < completeLedgers.length; i++) {
+    combo = completeLedgers[i];
+    minMax = combo.match(/\d+/g);
+    minLedgerVersion = parseInt(minMax[0]);
+    maxLedgerVersion = parseInt(minMax[1]);
+    query = { minLedgerVersion: minLedgerVersion, maxLedgerVersion: maxLedgerVersion, types: ["payment"] };
+    if (limit) {
+      query = Object.assign({}, { limit: parseInt(limit) }, query);
+    }
+    nextTransactions = await(this.api.getTransactions(address, query));
     transactions.push(...nextTransactions);
-  });
+    if (transactions.length >= limit) {
+      break;
+    }
+  }
   // console.log(minLedgerVersion, maxLedgerVersion);
   return transactions;
 });
