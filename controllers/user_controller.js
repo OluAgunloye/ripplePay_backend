@@ -30,7 +30,7 @@ exports.comparePassword = function(req, res, next) {
 exports.signup = async(function(req, res, next) {
   let email = req.body.email;
   let password = req.body.password;
-
+  
   let passwordValidationFailures = await(passwordValidator.validatePassword(password));
 
   if (passwordValidationFailures) {
@@ -55,6 +55,29 @@ exports.signup = async(function(req, res, next) {
       res.json({token: tokenForUser(user)});
     });
   });
+});
+
+exports.changePassword = async(function(req, res, next) {
+  const { oldPassword, newPassword } = req.body;
+  const user = req.user;
+  user.comparePassword(oldPassword, async(function (error, isMatch) {
+    if (error) { return next(error); }
+    if (!isMatch) {
+      res.json({ success: false });
+      return;
+    }
+    let passwordValidationFailures = await(passwordValidator.validatePassword(newPassword));
+
+    if (passwordValidationFailures) {
+      return res.status(422).json({ error: passwordValidationFailures });
+    }
+    user.password = newPassword;
+    user.save(function(err) {
+      if (err) { return next(err); }
+      return res.json({ success: true })
+    });
+
+  }));
 });
 
 exports.search = function (req, res, next) {
