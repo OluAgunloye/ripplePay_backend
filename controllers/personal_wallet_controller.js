@@ -22,6 +22,7 @@ exports.generatePersonalAddress = asynchronous(function (req, res, next) {
 
 exports.getPersonalAddressTransactions = asynchronous(function (req, res, next) {
     const user = req.user;
+    const limit = req.query[0];
     if (!user.personalAddress) {
         return res.json({ message: "user does not have a personal address!" });
     }
@@ -29,7 +30,7 @@ exports.getPersonalAddressTransactions = asynchronous(function (req, res, next) 
     if (personalAddressBalance === 0) {
         return res.json({message: "New XRP wallets require 20 XRP!"});
     }
-    const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress));
+    const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress, limit));
     res.json({ 
         personalAddress: user.personalAddress, 
         personalAddressBalance, 
