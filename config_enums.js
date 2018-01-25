@@ -1,0 +1,1 @@
+exports.ripplePayFee = 0.02;

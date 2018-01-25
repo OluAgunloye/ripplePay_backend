@@ -6,6 +6,7 @@ const { CashRegister, Money } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
+const Config = require('../config_enums');
 const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 
@@ -31,7 +32,7 @@ exports.inBankSend = asynchronous(function(req, res, next){
     return res.json({message: "Balance Insufficient", balance: sender.balance});
   }
   
-  if (amount <= 0) {
+  if (!amount || amount <= 0) {
     return res.json({message: "Cant send 0 or less XRP"})
   }
 
@@ -86,7 +87,7 @@ exports.preparePayment = asynchronous(function(req, res, next) {
     return res.json({ message: "Balance Insufficient" });
   }
 
-  if (amount <= 0) {
+  if (!amount || amount <= 0) {
     return res.json({ message: "Cant send 0 or less XRP"});
   }
 
@@ -98,11 +99,9 @@ exports.preparePayment = asynchronous(function(req, res, next) {
   //   return res.json({ message: "Send with no fee to a ripplePay user!"});
   // }
 
-  const txnInfo = await(rippledServer.getTransactionInfo(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
-  const fee = txnInfo.instructions.fee;
-  res.json({
-    fee: txnInfo.instructions.fee
-  });
+  const txnInfo = await(rippledServer.prepareTransaction(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
+  const fee = parseFloat(txnInfo.instructions.fee);
+  return res.json({ fee });
 })
 
 exports.signAndSend = asynchronous (function(req, res, next){
@@ -111,13 +110,13 @@ exports.signAndSend = asynchronous (function(req, res, next){
   const existingUser = req.user;
   const userId = existingUser._id;
 
+  if (!amount || amount <= 0) {
+    return res.json({ message: "Cant send 0 or less XRP" });
+  }
+
   if (amount > existingUser.balance) {
     res.json({ message: "Balance Insufficient" });
     return;
-  }
-
-  if (amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP" });
   }
 
   const registerAddress = fromAddress;
@@ -213,10 +212,10 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         if ( balanceChange < 0 && currTxn.outcome.result === "tesSUCCESS")
         {
           // ripplePay fee for outgoing txn
-          balanceChange -= 0.02;
-          const fee = currTxn.outcome.fee;
+          balanceChange -= Config.ripplePayFee;
+          const fee = parseFloat(currTxn.outcome.fee);
 
-          Money.update({}, { '$inc': { cost: fee, revenue: 0.02 + fee, profit: 0.02 } }, function (err, doc) {
+          Money.update({}, { '$inc': { cost: fee, revenue: Config.ripplePayFee + fee, profit: Config.ripplePayFee } }, function (err, doc) {
             if (err) {
               console.log(err, "error updating money!");
             }
