@@ -27,9 +27,14 @@ exports.getFromTheCache = asynchronous(function (key, userId) {
   return null;
 });
 
-exports.setInCache = asynchronous(function(key, userId, value){
+exports.setInCache = asynchronous(function(key, userId, value, secondsExpiry){
   const userKey = moddedKey(key, userId);
-  RedisCache.set(userKey, JSON.stringify(value));
+  if (secondsExpiry) {
+    RedisCache.set(userKey, JSON.stringify(value), 'EX', secondsExpiry);
+  }
+  else {
+    RedisCache.set(userKey, JSON.stringify(value));
+  }
 });
 
 exports.findFromCacheUpdateString = asynchronous(function(key, userId, callback) {
@@ -43,7 +48,20 @@ exports.findFromCacheUpdateString = asynchronous(function(key, userId, callback)
 
 exports.removeFromCache = function(key, userId) {
   const userKey = moddedKey(key, userId);
-  RedisCache.delAsync(userKey).then((res) => {
-    console.log(res);
-  });
+  
+  RedisCache.delAsync(userKey).then((response) => {
+    console.log(response);
+  })
 };
+
+// Testing Key expiry
+// let prac = asynchronous(function(){
+//   await(exports.setInCache("yo", "yo", "yoyo", 3));
+//   console.log(await(exports.getFromTheCache("yo","yo")));
+//   setTimeout(asynchronous(function() {
+//     console.log(await(exports.getFromTheCache("yo","yo")));
+//   }), 4000);
+
+// })
+
+// prac();
