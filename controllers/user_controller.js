@@ -2,17 +2,31 @@ const User = require('../models/user');
 const { tokenForUser } = require('../services/token');
 const async = require('asyncawait/async');
 const await = require('asyncawait/await');
+const Redis = require('../services/redis');
 const passwordValidator = require('../services/passwordValidator');
 
-exports.signin = function(req, res) {
+exports.signin = async(function(req, res) {
   let user = req.user;
+  const userId = user._id;
+  const loggedIn = await(Redis.getFromTheCache("logged-in", userId));
+
+  if (loggedIn) {
+    return res.status(422).json({ error: "User is already logged in elsewhere!" });
+  }
   res.send({
     cashRegister: user.cashRegister,
     wallets: user.wallets,
     screenName: user.screenName,
     personalAddress: user.personalAddress
   });
-};
+});
+
+exports.endsession = async(function(req, res, next) {
+  const userId = req.user._id;
+
+  Redis.removeFromCache("logged-in", userId);
+  res.json({});
+});
 
 exports.comparePassword = function(req, res, next) {
   const user = req.user;

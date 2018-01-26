@@ -54,7 +54,7 @@ app.use(bodyParser.json());
 
 app.use('/v1', rateLimit.apiLimiter);
 // make token through middleware for everything except signup, which must create user first.
-app.use(/^(?!\/v1\/(signup))/, mung.json(
+app.use(/^(?!\/v1\/(signup|endsession))/, mung.json(
   function transform(body, req, res) {
     body.token = Token.tokenForUser(req.user);
     return body;

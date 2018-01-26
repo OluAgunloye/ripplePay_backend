@@ -120,23 +120,22 @@ RippledServer.prototype.prepareTransaction = async(function(fromAddress, toAddre
   await(this.api.connect());
   const paymentObject = this.preparePayment(fromAddress, toAddress, destTag, sourceTag, value);
   const txnInfo = await(this.api.preparePayment(fromAddress, paymentObject, { maxLedgerVersionOffset: 250 }));
-
+  console.log(txnInfo);
+  
   if (userId) {
-    await (Redis.setInCache("prepared-transaction", userId, txnInfo));
+    await (Redis.setInCache("prepared-transaction", userId, txnInfo.txJSON));
   }
   return txnInfo;
 });
 
 RippledServer.prototype.signAndSend = async(function(address, secret, userId) {  
-  txnInfo = await(Redis.getFromTheCache("prepared-transaction", userId));
-  if (!txnInfo) {
+  const txJSON = await(Redis.getFromTheCache("prepared-transaction", userId));
+  if (!txJSON) {
     return null;
   }
-
-  console.log(txnInfo);
   
   await(this.api.disconnect()); 
-  const signature = this.api.sign(txnInfo.txJSON, secret);
+  const signature = this.api.sign(txJSON, secret);
   const txnBlob = signature.signedTransaction;
   
   await(this.api.connect());
