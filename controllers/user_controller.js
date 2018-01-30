@@ -11,7 +11,7 @@ exports.signin = async(function(req, res) {
   const loggedIn = await(Redis.getFromTheCache("logged-in", userId));
 
   if (loggedIn) {
-    return res.status(422).json({ error: "User is already logged in elsewhere!" });
+    return res.status(422).json({ error: "User is already logged in elsewhere! Please wait 3 minutes." });
   }
   res.send({
     cashRegister: user.cashRegister,

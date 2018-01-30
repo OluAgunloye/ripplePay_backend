@@ -10,7 +10,7 @@ if (process.env.NODE_ENV=='production') {
 } else {
     secret = require('../configs/config').SECRET;
 
-    exports.EXPIRE_TIME = 100000000;
+    exports.EXPIRE_TIME = 10000000;
 }
 // could this be problematic in different countries??
 exports.tokenForUser = function (user) {

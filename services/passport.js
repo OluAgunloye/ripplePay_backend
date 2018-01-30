@@ -37,11 +37,13 @@ let jwtOptions = {
 
 let jwtStrategy = new JwtStrategy(jwtOptions, function(payload, done) {
   const userId = payload.sub;
+
   if (new Date().getTime() > payload.exp) {
     const problem = "token has expired!!";
     Redis.removeFromCache("logged-in", userId);
-    return done(problem);
+    return done(null, problem);
   }
+
   User.findById(userId, function(err, user) {
     if (err) { return done(err, false); }
     if (user) {
