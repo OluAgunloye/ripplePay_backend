@@ -39,7 +39,7 @@ router.route('/authUrl')
 router.route('/changepass')
   .post(requireAPIKey, rateLimit.changePasswordLimiter, requireAuth, UserController.changePassword);
 router.route('/endsession')
-  .post(requireAPIKey, UserController.endsession);
+  .post(requireAPIKey, requireAuth, UserController.endsession);
 router.route('/search')
   .get(requireAPIKey, requireAuth, UserController.search);
 
