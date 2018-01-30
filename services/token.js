@@ -6,7 +6,7 @@ let secret;
 if (process.env.NODE_ENV=='production') {
     secret = process.env.SECRET;
     // making 30 mins for now, but change to 3 later
-    exports.EXPIRE_TIME = 1800000;
+    exports.EXPIRE_TIME = 10000;
 } else {
     secret = require('../configs/config').SECRET;
 
