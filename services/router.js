@@ -9,9 +9,10 @@ const rateLimit = require('./rateLimit');
 // the following will take passport and will make some requirements on it
 const passportService = require('./passport');
 
-let requireAuth = passport.authenticate('jwt', {session: false});
-let requireLogin = passport.authenticate('local', {session: false});
 let router = require('express').Router();
+
+let requireAuth = passport.authenticate('jwt', { session: false, failureRedirect: '/v1/checkUrl' });
+let requireLogin = passport.authenticate('local', {session: false});
 
 let apiKey;
 
@@ -27,6 +28,17 @@ function requireAPIKey(req, res, next) {
   }
   next();
 }
+
+function checkUrl(req, res, next) {
+  if (req.url === '/endsession') {
+    next();
+    return;
+  }
+  next('error making request');
+}
+
+router.route('/checkUrl')
+  .get(checkUrl)
 // Auth Routes`
 // -----------------------------------------------------------------------------
 // USER CONTROLLER
