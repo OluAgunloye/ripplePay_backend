@@ -11,7 +11,7 @@ const passportService = require('./passport');
 
 let router = require('express').Router();
 
-let requireAuth = passport.authenticate('jwt', { session: false, failureRedirect: '/v1/checkUrl' });
+let requireAuth = passport.authenticate('jwt', { session: false, failureRedirect: '/v1/forceLogout' });
 let requireLogin = passport.authenticate('local', {session: false});
 
 let apiKey;
@@ -29,16 +29,12 @@ function requireAPIKey(req, res, next) {
   next();
 }
 
-function checkUrl(req, res, next) {
-  if (req.url === '/endsession') {
-    next();
-    return;
-  }
-  next('error making request');
+function forceLogout(req, res, next) {
+  return res.status(401).json({ error: "Session timed out!" });
 }
 
-router.route('/checkUrl')
-  .get(checkUrl)
+router.route('/forceLogout')
+  .get(forceLogout)
 // Auth Routes`
 // -----------------------------------------------------------------------------
 // USER CONTROLLER
