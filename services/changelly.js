@@ -64,13 +64,15 @@ module.exports = (function () {
         getCurrencies: function (callback) {
             return this._request('getCurrencies', {}, callback);
         },
-        createTransaction: function (from, to, address, amount, extraId, callback) {
+        createTransaction: function (from, to, address, amount, extraId, refundAddress, refundExtraId, callback) {
             var params = {
                 from: from,
                 to: to,
                 address: address,
                 amount: amount,
-                extraId: extraId
+                extraId: extraId,
+                refundAddress: refundAddress,
+                refundExtraId: refundExtraId
             };
 
             return this._request('createTransaction', params, callback);
