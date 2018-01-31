@@ -25,7 +25,7 @@ changelly.getCurrencies(function (err, data) {
     }
 });
 
-changelly.createTransaction('eth', 'xrp', '1PKYrd9CC4RFB65wBrvaAsTWnp8fXePuj', 10, undefined, function (err, data) {
+changelly.createTransaction('xrp', 'eth', '0xA800BaAA96f2DF6F049E460a46371B515ae7Fd7C', 500, undefined, function (err, data) {
     if (err) {
         console.log('Error!', err);
     } else {
@@ -33,7 +33,7 @@ changelly.createTransaction('eth', 'xrp', '1PKYrd9CC4RFB65wBrvaAsTWnp8fXePuj', 1
     }
 });
 
-changelly.getMinAmount('eth', 'btc', function (err, data) {
+changelly.getMinAmount('xrp', 'eth', function (err, data) {
     if (err) {
         console.log('Error!', err);
     } else {
@@ -57,7 +57,7 @@ changelly.getTransactions(10, 0, 'btc', undefined, undefined, function (err, dat
     }
 });
 
-changelly.getStatus('215065b60531', function (err, data) {
+changelly.getStatus('8b804a91eeb0', function (err, data) {
     if (err) {
         console.log('Error!', err);
     } else {
