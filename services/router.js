@@ -4,6 +4,7 @@ const UserController = require('../controllers/user_controller');
 const BankController = require('../controllers/banks_controller');
 const WalletController = require('../controllers/wallets_controller');
 const ShapeshiftController = require('../controllers/shapeshift_controller');
+const ChangellyController = require('../controllers/changelly_controller');
 const PersonalWalletController = require('../controllers/personal_wallet_controller');
 const rateLimit = require('./rateLimit');
 // the following will take passport and will make some requirements on it
@@ -98,8 +99,13 @@ router.route('/nextTransactions')
     .get(requireAPIKey, requireAuth, ShapeshiftController.loadNextShapeShiftTransactions);
   router.route('/getShapeId')
     .get(requireAPIKey, rateLimit.ledgerLookupLimiter, requireAuth, ShapeshiftController.getShapeshiftTransactionId);
-
-
+// CHANGELLY CONTROLLER
+  router.route('/makechange')
+    .post(requireAPIKey, requireAuth, ChangellyController.createChangellyTransaction);
+  router.route('/getchanges')
+    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactions);
+  router.route('/getchangestatus')
+    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionStatus);
 
 
 module.exports = router;
