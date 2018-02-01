@@ -106,6 +106,16 @@ router.route('/nextTransactions')
     .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactions);
   router.route('/getchangestatus')
     .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionStatus);
+  router.route('/nextchanges')
+    .post(requireAPIKey, requireAuth, ChangellyController.loadNextChangellyTransactions);
+  router.route('/changellyRippleTxnId')
+    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionId);
+  router.route('/changellyCoins')
+    .post(requireAPIKey, requireAuth, ChangellyController.getCoins);
+  router.route('/changellyRate')
+    .post(requireAPIKey, requireAuth, ChangellyController.getExchangeRate);
+  router.route('/minAmount')
+    .post(requireAPIKey, requireAuth, ChangellyController.getMinAmount);
 
 
 module.exports = router;
