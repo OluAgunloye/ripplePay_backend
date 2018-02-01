@@ -38,7 +38,7 @@ function formatChangellyTransaction(order, userId, from, to) {
 }
 
 exports.createChangellyTransaction = function(req, res, next) {
-    let { from, to, withdrawalAddress, pair, refundAddress, toDestTag, refundDestTag } = req.body;
+    let { from, to, withdrawalAddress, refundAddress, toDestTag, refundDestTag } = req.body;
     let { fromAmount, fromCoin } = from;
     let { toAmount, toCoin } = to;
     let userId = req.user._id;
