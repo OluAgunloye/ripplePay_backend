@@ -37,4 +37,4 @@ const changellyTransactionSchema = new Schema({
     }
 });
 
-exports.ShapeShiftTransaction = mongoose.model('shapeshifttransaction', shapeShiftTransactionSchema);
+exports.ChangellyTransaction = mongoose.model('changellyTransaction', changellyTransactionSchema);
