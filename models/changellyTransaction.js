@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const changellyTransactionSchema = new Schema({
     //Email has to be dropped at some point. WE DON'T WANT THEIR EMAILS
+    changellyTxnId: {
+        type: String
+    },
     changellyAddress: {
         type: String
     },
@@ -11,13 +14,16 @@ const changellyTransactionSchema = new Schema({
     userId: {
         type: String
     },
-    txnId: {
+    rippleTxnId: {
         type: String
     },
     date: {
         type: Number
     },
     otherParty: {
+        type: String
+    },
+    toDestTag: {
         type: String
     },
     from: {
@@ -32,9 +38,9 @@ const changellyTransactionSchema = new Schema({
     refundAddress: {
         type: String
     },
-    orderId: {
+    refundDestTag: {
         type: String
-    }
+    },
 });
 
 exports.ChangellyTransaction = mongoose.model('changellyTransaction', changellyTransactionSchema);

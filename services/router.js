@@ -71,10 +71,6 @@ router.route('/nextTransactions')
     .post(requireAPIKey, requireAuth, WalletController.receiveOnlyDesTag);
   router.route('/addrs')
     .post(requireAPIKey, requireAuth, WalletController.generateRegister);
-  router.route('/wallets')
-  .get(requireAPIKey, requireAuth, WalletController.receiveAllWallets);
-  router.route('/old')
-    .get(requireAPIKey, requireAuth, WalletController.findOldAddress);
 
 // PERSONAL WALLET CONTROLLER
   router.route('/personal')
@@ -104,19 +100,19 @@ router.route('/nextTransactions')
   router.route('/makechange')
     .post(requireAPIKey, requireAuth, ChangellyController.createChangellyTransaction);
   router.route('/getchanges')
-    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactions);
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactions);
   router.route('/getchangestatus')
-    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionStatus);
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionStatus);
   router.route('/nextchanges')
-    .post(requireAPIKey, requireAuth, ChangellyController.loadNextChangellyTransactions);
+    .get(requireAPIKey, requireAuth, ChangellyController.loadNextChangellyTransactions);
   router.route('/changellyRippleTxnId')
-    .post(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionId);
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyRippleTransactionId);
   router.route('/changellyCoins')
-    .post(requireAPIKey, requireAuth, ChangellyController.getCoins);
+    .get(requireAPIKey, requireAuth, ChangellyController.getCoins);
   router.route('/changellyRate')
-    .post(requireAPIKey, requireAuth, ChangellyController.getExchangeRate);
+    .get(requireAPIKey, requireAuth, ChangellyController.getExchangeRate);
   router.route('/minAmount')
-    .post(requireAPIKey, requireAuth, ChangellyController.getMinAmount);
+    .get(requireAPIKey, requireAuth, ChangellyController.getMinAmount);
 
 
 module.exports = router;
