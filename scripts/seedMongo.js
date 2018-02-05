@@ -5,7 +5,7 @@ const async = require('async');
 
 const { addresses, bank } = require('../configs/addresses');
 const { CashRegister, Money } = require('../models/moneyStorage');
-const { ShapeShiftTransaction } = require('../models/shapeShiftTransaction');
+const { ChangellyTransaction } = require('../models/changellyTransaction');
 const { Transaction } = require('../models/transaction');
 
 mongoose.Promise = global.Promise;
@@ -27,7 +27,7 @@ mongoose.connection.once('connected', () => {
     mongoose.connection.db.collection("cashregisters").createIndex({address: 1}, {background: true});
     mongoose.connection.db.collection("cashregisters").createIndex({balance: 1}, {background: true});
     mongoose.connection.db.collection("transactions").createIndex({ userId: 1, date: 1 }, { background: true });
-    mongoose.connection.db.collection("shapeshifttransactions").createIndex({ userId: 1, date: 1, shapeShiftAddress: 1}, {background: true});
+    mongoose.connection.db.collection("changellytransactions").createIndex({ changellyTxnId: 1 }, {background: true});
     mongoose.connection.db.collection("users").createIndex({screenName: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({email: 1}, {background: true});
     mongoose.connection.db.collection("usedwallets").createIndex({wallet: 1}, {background: true});
@@ -64,8 +64,8 @@ money.KEY_TWO = require('../configs/config').KEY_TWO;
 money.save(function(err){
 
 });
-let shapeShiftTransaction = new ShapeShiftTransaction;
-shapeShiftTransaction.save(function(err){
+let changellyTransaction = new ChangellyTransaction;
+changellyTransaction.save(function(err){
 
 });
 let transaction = new Transaction;

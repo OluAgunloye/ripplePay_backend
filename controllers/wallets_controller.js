@@ -45,12 +45,6 @@ exports.deleteWallet = asynchronous(function(req, res, next){
   res.json({});
 })
 
-exports.findOldAddress = asynchronous(function(req, res, next){
-  let existingUser = req.user;
-  let userId = existingUser._id;
-  res.json({cashRegister: existingUser.cashRegister});
-});
-
 exports.generateRegister = asynchronous(function(req, res, next){
   const existingUser = req.user;
   if (existingUser.wallets.length === 5) {
@@ -72,9 +66,3 @@ exports.generateRegister = asynchronous(function(req, res, next){
       });
     });
 });
-
-exports.receiveAllWallets = asynchronous(function(req, res, next){
-  let existingUser = req.user;
-  let userId = existingUser._id;
-  res.json({wallets: existingUser.wallets});
-})

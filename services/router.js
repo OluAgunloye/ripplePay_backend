@@ -3,7 +3,8 @@ const passport = require('passport');
 const UserController = require('../controllers/user_controller');
 const BankController = require('../controllers/banks_controller');
 const WalletController = require('../controllers/wallets_controller');
-const ShapeshiftController = require('../controllers/shapeshift_controller');
+// const ShapeshiftController = require('../controllers/shapeshift_controller');
+const ChangellyController = require('../controllers/changelly_controller');
 const PersonalWalletController = require('../controllers/personal_wallet_controller');
 const rateLimit = require('./rateLimit');
 // the following will take passport and will make some requirements on it
@@ -70,10 +71,6 @@ router.route('/nextTransactions')
     .post(requireAPIKey, requireAuth, WalletController.receiveOnlyDesTag);
   router.route('/addrs')
     .post(requireAPIKey, requireAuth, WalletController.generateRegister);
-  router.route('/wallets')
-  .get(requireAPIKey, requireAuth, WalletController.receiveAllWallets);
-  router.route('/old')
-    .get(requireAPIKey, requireAuth, WalletController.findOldAddress);
 
 // PERSONAL WALLET CONTROLLER
   router.route('/personal')
@@ -90,16 +87,32 @@ router.route('/nextTransactions')
     .post(requireAPIKey, requireAuth, PersonalWalletController.prepareTransactionPersonalToBank);
 
 // SHAPESHIFT CONTROLLER
-  router.route('/makeshift')
-    .post(requireAPIKey, requireAuth, ShapeshiftController.createShapeshiftTransaction);
-  router.route('/getshifts')
-    .get(requireAPIKey, requireAuth, ShapeshiftController.getShapeshiftTransactions);
-  router.route('/nextShapeShiftTransactions')
-    .get(requireAPIKey, requireAuth, ShapeshiftController.loadNextShapeShiftTransactions);
-  router.route('/getShapeId')
-    .get(requireAPIKey, rateLimit.ledgerLookupLimiter, requireAuth, ShapeshiftController.getShapeshiftTransactionId);
+  // router.route('/makeshift')
+  //   .post(requireAPIKey, requireAuth, ShapeshiftController.createShapeshiftTransaction);
+  // router.route('/getshifts')
+  //   .get(requireAPIKey, requireAuth, ShapeshiftController.getShapeshiftTransactions);
+  // router.route('/nextShapeShiftTransactions')
+  //   .get(requireAPIKey, requireAuth, ShapeshiftController.loadNextShapeShiftTransactions);
+  // router.route('/getShapeId')
+  //   .get(requireAPIKey, rateLimit.ledgerLookupLimiter, requireAuth, ShapeshiftController.getShapeshiftTransactionId);
 
-
+  // CHANGELLY CONTROLLER
+  router.route('/makechange')
+    .post(requireAPIKey, requireAuth, ChangellyController.createChangellyTransaction);
+  router.route('/getchanges')
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactions);
+  router.route('/getchangestatus')
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyTransactionStatus);
+  router.route('/nextchanges')
+    .get(requireAPIKey, requireAuth, ChangellyController.loadNextChangellyTransactions);
+  router.route('/changellyRippleTxnId')
+    .get(requireAPIKey, requireAuth, ChangellyController.getChangellyRippleTransactionId);
+  router.route('/changellyCoins')
+    .get(requireAPIKey, requireAuth, ChangellyController.getCoins);
+  router.route('/changellyRate')
+    .get(requireAPIKey, requireAuth, ChangellyController.getExchangeRate);
+  router.route('/minAmount')
+    .get(requireAPIKey, requireAuth, ChangellyController.getMinAmount);
 
 
 module.exports = router;

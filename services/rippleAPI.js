@@ -88,6 +88,7 @@ RippledServer.prototype.getTransactions = async(function(address, limit) {
   // console.log(serverInfo);
   // do newest to oldest by reversing.
   const completeLedgers = serverInfo.completeLedgers.match(/(\d+)\-(\d+)/g).reverse();
+  
   const transactions = [];
   let combo, query, minMax, nextTransactions, minLedgerVersion, maxLedgerVersion;
   for (let i = 0; i < completeLedgers.length; i++) {
