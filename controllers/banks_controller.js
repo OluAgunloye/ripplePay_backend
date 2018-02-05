@@ -124,7 +124,7 @@ exports.signAndSend = asynchronous (function(req, res, next){
 
   const masterKey = await(Decryption.getMasterKey());
   
-  let sendMoney = asynchronous (function(){
+  let sendMoney = asynchronous(function(){
 
       const encryptedRegisterAddress = Encryption.encrypt(masterKey, registerAddress);
       const encryptedRegisterSecret = encryptedAddresses[encryptedRegisterAddress];
@@ -147,7 +147,7 @@ exports.signAndSend = asynchronous (function(req, res, next){
     res.json({message: "Cash Register Empty Error. Please report this to ripplePay@gmail.com"});
   } else {
     sendMoney();
-  }
+  } 
 })
 
 // Address and Destination/Source Tag used to get user's transactions and balance

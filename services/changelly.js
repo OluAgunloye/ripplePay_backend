@@ -62,15 +62,17 @@ module.exports = (function () {
 
     Changelly.prototype = {
         getCurrencies: function (callback) {
-            return this._request('getCurrencies', {}, callback);
+            return this._request('getCurrenciesFull', {}, callback);
         },
-        createTransaction: function (from, to, address, amount, extraId, callback) {
+        createTransaction: function (from, to, address, amount, extraId, refundAddress, refundExtraId, callback) {
             var params = {
                 from: from,
                 to: to,
                 address: address,
                 amount: amount,
-                extraId: extraId
+                extraId: extraId,
+                refundAddress: refundAddress,
+                refundExtraId: refundExtraId
             };
 
             return this._request('createTransaction', params, callback);
