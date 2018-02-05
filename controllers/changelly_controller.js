@@ -11,7 +11,7 @@ let apiKey, apiSecret;
 
 const TXN_LIMIT = 10;
 
-if (process.env.NODE_ENV==='production')  {
+if (process.env.NODE_ENV === 'production') {
     apiKey = process.env.CHANGELLY_APIKEY;
     apiSecret = process.env.CHANGELLY_API_SECRET;
 }
@@ -26,7 +26,7 @@ var changelly = new Changelly(
     apiSecret
 );
 // from and to are objects with schema { from(to)Coin: 'xrp', from(to)Amount: 30 }
-function formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag="", refundDestTag="") {
+function formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag = "", refundDestTag = "") {
     return {
         changellyTxnId: changellyTxn.id,
         userId: userId,
@@ -43,9 +43,7 @@ function formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag=""
     };
 }
 
-exports.createChangellyTransaction = function(req, res, next) {
-    console.log(req.body);
-    
+exports.createChangellyTransaction = function (req, res, next) {
     let { from, to, withdrawalAddress, refundAddress, toDestTag, refundDestTag } = req.body;
     let { fromAmount, fromCoin } = from;
     fromAmount = parseFloat(fromAmount);
@@ -62,7 +60,7 @@ exports.createChangellyTransaction = function(req, res, next) {
     if (toDestTag) {
         toDestTag = (toDestTag).toString();
     }
-    
+
     changelly.createTransaction(
         fromCoin, toCoin, withdrawalAddress,
         fromAmount, toDestTag, refundAddress, refundDestTag,
@@ -76,7 +74,7 @@ exports.createChangellyTransaction = function(req, res, next) {
                 }
                 const changellyTxn = data.result;
                 const transaction = formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag, refundDestTag);
-                
+
                 const changellyTransaction = new ChangellyTransaction(transaction);
                 changellyTransaction.save(function (error) {
                     if (error) { return next(error); }
@@ -116,18 +114,21 @@ exports.getChangellyRippleTransactionId = asynchronous(function (req, res, next)
     let fromDestTag = query[2];
 
     const changellyTransaction = await(ChangellyTransaction.findOne({ changellyTxnId }));
-
     if (changellyTransaction.rippleTxnId) {
         return res.json({ rippleTxnId: changellyTransaction.rippleTxnId });
     }
     // if i don't have rippleTxnId for this changelly transaction, I will go to ripple ledger to find it.
     // to help customers get refund from changelly if they have to.
     let toAddress = changellyTransaction.changellyAddress;
-
+    let toDestTag = changellyTransaction.changellyDestTag;
     let txnInfo = await(rippledServer.getTransactions(fromAddress));
 
     const processTransaction = function (currTxn) {
-        if (toAddress === currTxn.specification.destination.address && fromDestTag === currTxn.specification.destination.tag) {
+        if (
+            toAddress === currTxn.specification.destination.address &&
+            parseInt(fromDestTag) === currTxn.specification.source.tag &&
+            parseInt(toDestTag) === currTxn.specification.destination.tag
+        ) {
             return currTxn.id;
         }
         else if (new Date(currTxn.outcome.timestamp).getTime() < new Date(changellyTransaction.date).getTime()) {
@@ -139,7 +140,7 @@ exports.getChangellyRippleTransactionId = asynchronous(function (req, res, next)
     let rippleTxnId;
     async.mapSeries(txnInfo, function (currTxn, cb) {
         rippleTxnId = processTransaction(currTxn);
-        if (rippleTxnId === null) {
+        if (rippleTxnId === null || rippleTxnId) {
             cb(true);
         }
         else {
@@ -159,7 +160,7 @@ exports.getChangellyRippleTransactionId = asynchronous(function (req, res, next)
     });
 });
 
-exports.getChangellyTransactionStatus = function(req, res, next) {
+exports.getChangellyTransactionStatus = function (req, res, next) {
     let changellyTxnId = req.query[0];
 
     changelly.getStatus(changellyTxnId, function (err, data) {
@@ -173,20 +174,20 @@ exports.getChangellyTransactionStatus = function(req, res, next) {
     });
 }
 
-exports.getCoins = function(req, res, next) {
+exports.getCoins = function (req, res, next) {
     // return res.json({coins: sampleCoins});
     changelly.getCurrencies(function (err, data) {
         if (err) {
             console.log('Error!', err);
             next(err);
         } else {
-            console.log('getCurrencies', data);
+            // console.log('getCurrencies', data);
             return res.json({ coins: data.result });
         }
     });
 }
 
-exports.getExchangeRate = function(req, res, next) {
+exports.getExchangeRate = function (req, res, next) {
     let coin = req.query[0];
 
     changelly.getExchangeAmount(coin.toLowerCase(), 'xrp', 1, function (err, data) {
@@ -200,7 +201,7 @@ exports.getExchangeRate = function(req, res, next) {
     });
 }
 
-exports.getMinAmount = function(req, res, next) {
+exports.getMinAmount = function (req, res, next) {
     let fromCoin = req.query[0];
     let toCoin = req.query[1];
     changelly.getMinAmount(fromCoin, toCoin, function (err, data) {
@@ -260,7 +261,7 @@ exports.getMinAmount = function(req, res, next) {
 //     }
 // });
 
-// changelly.getStatus('215065b60531', function (err, data) {
+// changelly.getStatus('dce18cd6b69f', function (err, data) {
 //     if (err) {
 //         console.log('Error!', err);
 //     } else {
