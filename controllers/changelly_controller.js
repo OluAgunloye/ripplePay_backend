@@ -1,7 +1,11 @@
-let Changelly = require('../services/changelly');
-let ChangellyTransaction = require('../models/changellyTransaction');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
+const async = require('async');
+let Changelly = require('../services/changelly');
+let { ChangellyTransaction } = require('../models/changellyTransaction');
+const RippledServer = require('../services/rippleAPI');
+const rippledServer = new RippledServer();
+// let { sampleCoins } = require('../references/testData');
 
 let apiKey, apiSecret;
 
@@ -22,41 +26,56 @@ var changelly = new Changelly(
     apiSecret
 );
 // from and to are objects with schema { from(to)Coin: 'xrp', from(to)Amount: 30 }
-function formatChangellyTransaction(order, userId, from, to) {
+function formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag="", refundDestTag="") {
     return {
-        orderId: order.id,
+        changellyTxnId: changellyTxn.id,
         userId: userId,
-        changellyAddress: order.payinAddress,
-        changellyDestTag: order.payinExtraId,
-        date: new Date(order.createdAt).getTime(),
-        otherParty: order.payoutAddress,
+        changellyAddress: changellyTxn.payinAddress,
+        changellyDestTag: changellyTxn.payinExtraId,
+        date: new Date(changellyTxn.createdAt).getTime(),
+        otherParty: changellyTxn.payoutAddress,
+        toDestTag: toDestTag,
         from: from,
         to: to,
-        refundAddress: order.refundAddress,
-        fee: parseFloat(order.changellyFee)
+        refundAddress: changellyTxn.refundAddress,
+        refundDestTag: refundDestTag,
+        fee: parseFloat(changellyTxn.changellyFee)
     };
 }
 
 exports.createChangellyTransaction = function(req, res, next) {
+    console.log(req.body);
+    
     let { from, to, withdrawalAddress, refundAddress, toDestTag, refundDestTag } = req.body;
     let { fromAmount, fromCoin } = from;
+    fromAmount = parseFloat(fromAmount);
+
     let { toAmount, toCoin } = to;
+    toAmount = parseFloat(toAmount);
+
     let userId = req.user._id;
-    // apparently the refundExtraId has to be a string? -> this has to be tested
+    // apparently the extraId has to be a string? -> this has to be tested
     // have to check if refunds will go back into the wallet of the dest-tag sending money
     if (refundDestTag) {
         refundDestTag = (refundDestTag).toString();
     }
+    if (toDestTag) {
+        toDestTag = (toDestTag).toString();
+    }
     
     changelly.createTransaction(
-        from, to, withdrawalAddress,
-        toAmount, toDestTag, refundAddress, refundDestTag,
+        fromCoin, toCoin, withdrawalAddress,
+        fromAmount, toDestTag, refundAddress, refundDestTag,
         function (err, data) {
             if (err) {
                 console.log('Error!', err);
             } else {
                 console.log('createTransaction', data);
-                const transaction = formatChangellyTransaction(data.result, userId, from, to);
+                if (data.error) {
+                    return res.json({ message: data.error });
+                }
+                const changellyTxn = data.result;
+                const transaction = formatChangellyTransaction(changellyTxn, userId, from, to, toDestTag, refundDestTag);
                 
                 const changellyTransaction = new ChangellyTransaction(transaction);
                 changellyTransaction.save(function (error) {
@@ -78,66 +97,64 @@ exports.getChangellyTransactions = asynchronous(function (req, res, next) {
 exports.loadNextChangellyTransactions = asynchronous(function (req, res, next) {
     const user = req.user;
     const userId = user._id;
-    const maxDate = req.query[0];
-    let nextChangellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT + 1));
+    const minDate = req.query[0];
+    let nextChangellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': minDate } }).sort({ date: -1 }).limit(TXN_LIMIT + 1));
     // remove the first transaction because that will already have been counted
     nextChangellyTransactions = nextChangellyTransactions.slice(1);
     const shouldLoadMoreChangellyTransactions = nextChangellyTransactions.length >= TXN_LIMIT ? true : false;
     res.json({ nextChangellyTransactions, shouldLoadMoreChangellyTransactions });
 });
 
-exports.getChangellyTransactionId = asynchronous(function (req, res, next) {
+exports.getChangellyRippleTransactionId = asynchronous(function (req, res, next) {
     const existingUser = req.user;
     const userId = existingUser._id;
 
     let query = req.query;
 
-    let changellyAddress = query[0];
-    let date = query[1];
-    let fromAddress = query[2];
+    let changellyTxnId = query[0];
+    let fromAddress = query[1];
+    let fromDestTag = query[2];
 
-    const changellyTransaction = await(ChangellyTransaction.findOne({ userId, date, changellyAddress }));
+    const changellyTransaction = await(ChangellyTransaction.findOne({ changellyTxnId }));
 
-    if (changellyTransaction.txnId) {
-        return res.json({ txnId: changellyTransaction.txnId });
+    if (changellyTransaction.rippleTxnId) {
+        return res.json({ rippleTxnId: changellyTransaction.rippleTxnId });
     }
-    // if i don't have txnId for this changelly transaction, I will go to ripple ledger to find it.
+    // if i don't have rippleTxnId for this changelly transaction, I will go to ripple ledger to find it.
     // to help customers get refund from changelly if they have to.
-    let toAddress = changellyAddress.match(/\w+/)[0];
-    let destTag = parseInt(changellyAddress.match(/\?dt=(\d+)/)[1]);
-
+    let toAddress = changellyTransaction.changellyAddress;
 
     let txnInfo = await(rippledServer.getTransactions(fromAddress));
 
     const processTransaction = function (currTxn) {
-        if (toAddress === currTxn.specification.destination.address && destTag === currTxn.specification.destination.tag) {
+        if (toAddress === currTxn.specification.destination.address && fromDestTag === currTxn.specification.destination.tag) {
             return currTxn.id;
         }
-        else if (new Date(currTxn.outcome.timestamp).getTime() < new Date(date).getTime()) {
+        else if (new Date(currTxn.outcome.timestamp).getTime() < new Date(changellyTransaction.date).getTime()) {
             return null;
         }
         return false;
     };
 
-    let txnId;
+    let rippleTxnId;
     async.mapSeries(txnInfo, function (currTxn, cb) {
-        txnId = processTransaction(currTxn);
-        if (txnId === null) {
+        rippleTxnId = processTransaction(currTxn);
+        if (rippleTxnId === null) {
             cb(true);
         }
         else {
             cb(null, currTxn);
         }
     }, function (error, resp) {
-        if (txnId) {
-            changellyTransaction.txnId = txnId;
+        if (rippleTxnId) {
+            changellyTransaction.rippleTxnId = rippleTxnId;
             return changellyTransaction.save(function (err) {
                 if (err) { return next(err) }
-                res.json({ txnId })
+                res.json({ rippleTxnId })
             });
         }
-        if (!txnId) {
-            return res.json({ txnId });
+        if (!rippleTxnId) {
+            return res.json({ rippleTxnId });
         }
     });
 });
@@ -157,6 +174,7 @@ exports.getChangellyTransactionStatus = function(req, res, next) {
 }
 
 exports.getCoins = function(req, res, next) {
+    // return res.json({coins: sampleCoins});
     changelly.getCurrencies(function (err, data) {
         if (err) {
             console.log('Error!', err);
@@ -171,7 +189,7 @@ exports.getCoins = function(req, res, next) {
 exports.getExchangeRate = function(req, res, next) {
     let coin = req.query[0];
 
-    changelly.getExchangeAmount(coin, 'xrp', 1, function (err, data) {
+    changelly.getExchangeAmount(coin.toLowerCase(), 'xrp', 1, function (err, data) {
         if (err) {
             console.log('Error!', err);
             next(err);
@@ -195,10 +213,20 @@ exports.getMinAmount = function(req, res, next) {
         }
     });
 }
+
+// changelly.getCurrencies(function (err, data) {
+//     if (err) {
+//         console.log('Error!', err);
+//     } else {
+//         console.log('getCurrencies', data);
+//         // return res.json({ coins: data.result });
+//     }
+// });
+// 
 // looks like refund extraId has to be a string??
 // changelly.createTransaction(
-//     'eth', 'xrp', 'rs1DXnp8LiKzFWER8JrDkMA7xBxQy1KrWi', 
-//     100, undefined, '0xA800BaAA96f2DF6F049E460a46371B515ae7Fd7C', undefined,
+//     'xrp', 'eth', '0xA800BaAA96f2DF6F049E460a46371B515ae7Fd7C', 
+//     1000, undefined, 'rs1DXnp8LiKzFWER8JrDkMA7xBxQy1KrWi', undefined,
 //     function (err, data) {
 //         if (err) {
 //             console.log('Error!', err);
@@ -208,7 +236,7 @@ exports.getMinAmount = function(req, res, next) {
 //     }
 // );
 
-// changelly.getMinAmount('eth', 'btc', function (err, data) {
+// changelly.getMinAmount('eth', 'xrp', function (err, data) {
 //     if (err) {
 //         console.log('Error!', err);
 //     } else {
@@ -216,7 +244,7 @@ exports.getMinAmount = function(req, res, next) {
 //     }
 // });
 
-// changelly.getExchangeAmount('btc', 'eth', 1, function (err, data) {
+// changelly.getExchangeAmount('xrp', 'eth', 1000, function (err, data) {
 //     if (err) {
 //         console.log('Error!', err);
 //     } else {

@@ -27,7 +27,7 @@ mongoose.connection.once('connected', () => {
     mongoose.connection.db.collection("cashregisters").createIndex({address: 1}, {background: true});
     mongoose.connection.db.collection("cashregisters").createIndex({balance: 1}, {background: true});
     mongoose.connection.db.collection("transactions").createIndex({ userId: 1, date: 1 }, { background: true });
-    mongoose.connection.db.collection("changellytransactions").createIndex({ userId: 1, date: 1, changellyAddress: 1}, {background: true});
+    mongoose.connection.db.collection("changellytransactions").createIndex({ changellyTxnId: 1 }, {background: true});
     mongoose.connection.db.collection("users").createIndex({screenName: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({email: 1}, {background: true});
     mongoose.connection.db.collection("usedwallets").createIndex({wallet: 1}, {background: true});
