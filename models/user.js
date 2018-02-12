@@ -1,12 +1,19 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
+const Config = require('../config_enums');
 
 var validateEmail = (email) => {
+  if (email.length > Config.MAX_EMAIL_LENGTH) {
+    return false;
+  }
   return (/\S+@\S+\.\S+/).test(email);
 };
 
 var validateScreenName = (screenName) => {
+  if (screenName.length > Config.MAX_SCREEN_NAME_LENGTH) {
+    return false;
+  }
   return (/^[a-zA-Z][0-9a-zA-Z]+$/).test(screenName);
 };
 
@@ -27,7 +34,7 @@ var userSchema = new Schema({
     unique: true,
     lowercase: true,
     required: 'Screen name is required',
-    validate: [validateScreenName, 'Please enter a valid screen name (no symbols)']
+    validate: [validateScreenName, 'Please enter a valid screen name (no symbols less than 30 chars)']
   },
   balance: {
     type: Number,
