@@ -88,7 +88,7 @@ exports.createChangellyTransaction = function (req, res, next) {
 exports.getChangellyTransactions = asynchronous(function (req, res, next) {
     let existingUser = req.user;
     let userId = existingUser._id;
-    const changellyTransactions = await(ChangellyTransaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
+    const changellyTransactions = await(ChangellyTransaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
     res.json({ changellyTransactions });
 })
 
@@ -96,7 +96,7 @@ exports.loadNextChangellyTransactions = asynchronous(function (req, res, next) {
     const user = req.user;
     const userId = user._id;
     const minDate = req.query[0];
-    let nextChangellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': minDate } }).sort({ date: -1 }).limit(TXN_LIMIT + 1));
+    let nextChangellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': minDate } }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT + 1));
     // remove the first transaction because that will already have been counted
     nextChangellyTransactions = nextChangellyTransactions.slice(1);
     const shouldLoadMoreChangellyTransactions = nextChangellyTransactions.length >= TXN_LIMIT ? true : false;
