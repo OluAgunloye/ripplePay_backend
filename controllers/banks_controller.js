@@ -257,7 +257,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         cb(true)
       }
     }), function(error, resp) {
-      userTransactions = await(Transaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
+      userTransactions = await(Transaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
       let updatedUser = await(
         User.findOneAndUpdate(
           {_id: existingUser._id}, 
@@ -273,7 +273,8 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   }
   else
   {
-    userTransactions = await(Transaction.find({ userId }).sort({ date: -1 }).limit(TXN_LIMIT));
+    // don't make userId available to frontend
+    userTransactions = await(Transaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
     res.json({
       transactions: userTransactions,
       balance: existingUser.balance
@@ -285,7 +286,7 @@ exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }).sort({ date: -1 }).limit(TXN_LIMIT+1));
+  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT+1));
   // remove the first since that will have already been counted.
   nextTransactions = nextTransactions.slice(1);
   const shouldLoadMoreTransactions = nextTransactions.length >= TXN_LIMIT ? true : false;
