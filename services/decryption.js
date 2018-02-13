@@ -21,7 +21,7 @@ exports.getMasterKey = async(function() {
 
         // if not in redis cache, hash the 2 keys and store in redis
         if (!keyHash) {
-            keyHash = pbkdf2.pbkdf2Sync(keyOne, salt, 10, 32, 'sha512').toString('hex');
+            keyHash = pbkdf2.pbkdf2Sync(keyOne, keyTwo, 10, 32, 'sha512').toString('hex');
             await (Redis.setInCache("secret-hash", "admin", keyHash));
         }
     } 
