@@ -11,11 +11,7 @@ const rippledServer = new RippledServer();
 exports.signin = async(function(req, res) {
   let user = req.user;
   const userId = user._id;
-  const loggedIn = await(Redis.getFromTheCache("logged-in", userId));
 
-  if (loggedIn) {
-    return res.status(422).json({ error: "User is already logged in elsewhere! Please wait 3 minutes." });
-  }
   let personalBalance;
   if (user.personalAddress) {
     personalBalance = await(rippledServer.getBalance(user.personalAddress));
@@ -27,13 +23,6 @@ exports.signin = async(function(req, res) {
     personalAddress: user.personalAddress,
     personalBalance: personalBalance
   });
-});
-
-exports.endsession = async(function(req, res, next) {
-  const userId = req.user._id;
-
-  Redis.removeFromCache("logged-in", userId);
-  res.json({});
 });
 
 exports.comparePassword = function(req, res, next) {
