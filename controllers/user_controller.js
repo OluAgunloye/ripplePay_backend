@@ -4,6 +4,9 @@ const async = require('asyncawait/async');
 const await = require('asyncawait/await');
 const Redis = require('../services/redis');
 const passwordValidator = require('../services/passwordValidator');
+const Lock = require('../services/lock');
+const RippledServer = require('../services/rippleAPI');
+const rippledServer = new RippledServer();
 
 exports.signin = async(function(req, res) {
   let user = req.user;
@@ -13,11 +16,16 @@ exports.signin = async(function(req, res) {
   if (loggedIn) {
     return res.status(422).json({ error: "User is already logged in elsewhere! Please wait 3 minutes." });
   }
+  let personalBalance;
+  if (user.personalAddress) {
+    personalBalance = await(rippledServer.getBalance(user.personalAddress));
+  }
   res.send({
     cashRegister: user.cashRegister,
     wallets: user.wallets,
     screenName: user.screenName,
-    personalAddress: user.personalAddress
+    personalAddress: user.personalAddress,
+    personalBalance: personalBalance
   });
 });
 
@@ -40,10 +48,11 @@ exports.comparePassword = function(req, res, next) {
     res.json({success: true});
   });
 };
-
+// add all the validations for email, password, screenName later.
 exports.signup = async(function(req, res, next) {
   let email = req.body.email;
   let password = req.body.password;
+  let screenName = req.body.screenName;
   
   let passwordValidationFailures = await(passwordValidator.validatePassword(password));
 
@@ -51,24 +60,32 @@ exports.signup = async(function(req, res, next) {
     return res.status(422).json({ error: passwordValidationFailures });
   }
 
-  let screenName = req.body.screenName;
   if (!email || !password || !screenName) {
     return res.status(422).json({error: "You must provide an email, password & screen name"});
   }
 
-  User.findOne({email: email}, function(err, existingUser) {
-    if (err) { return next(err); }
-    if (existingUser) {return res.status(422).json({error: "Email taken"});}
-    let user = new User({
-      email: email,
-      password: password,
-      screenName: screenName
-    });
-    user.save(function(err) {
+  const unlockEmail = await(Lock.lock(Lock.LOCK_PREFIX.EMAIL, email));
+  const unlockScreenName = await(Lock.lock(Lock.LOCK_PREFIX.SCREEN_NAME, screenName));
+
+  try {
+    User.findOne({email: email}, function(err, existingUser) {
       if (err) { return next(err); }
-      res.json({token: tokenForUser(user)});
+      if (existingUser) {return res.status(422).json({error: "Email taken"});}
+      let user = new User({
+        email: email,
+        password: password,
+        screenName: screenName
+      });
+      user.save(function(err) {
+        if (err) { return next(err); }
+        res.json({token: tokenForUser(user)});
+      });
     });
-  });
+  }
+  finally {
+    unlockEmail();
+    unlockScreenName();
+  }
 });
 
 exports.changePassword = async(function(req, res, next) {

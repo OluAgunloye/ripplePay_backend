@@ -69,3 +69,5 @@ exports.removeFromCache = function(key, userId) {
     console.log(response);
   })
 };
+
+exports.RedisCache = RedisCache;
