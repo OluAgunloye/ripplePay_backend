@@ -75,10 +75,12 @@ exports.sendPaymentWithPersonalAddress = asynchronous(function (req, res, next) 
     if (!amount || amount <= 0) {
         return res.json({ message: "Cant send 0 or less XRP" });
     }
-    
+    // Do a validation check here to check if the person has the amount + 0.02 fee to pay and if not give error
     const result = await(rippledServer.signAndSend(fromAddress, secret, userId));
     
-    await(rippledServer.autoPayFee(fromAddress, secret));
+    if (result && result.resultCode === "tesSUCCESS") {
+        await(rippledServer.autoPayFee(fromAddress, secret));
+    }
 
     if (result) {
         console.log(result);

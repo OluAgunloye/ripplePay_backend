@@ -134,7 +134,7 @@ RippledServer.prototype.signAndSend = async(function(address, secret, userId) {
   if (!txJSON) {
     return null;
   }
-  
+
   await(this.api.disconnect()); 
   const signature = this.api.sign(txJSON, secret);
   const txnBlob = signature.signedTransaction;

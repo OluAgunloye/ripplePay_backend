@@ -84,7 +84,7 @@ exports.preparePayment = asynchronous(function(req, res, next) {
   let userId = existingUser._id;
 
   if (amount > existingUser.balance) {
-    return res.json({ message: "Balance Insufficient" });
+    return res.json({ message: "User Balance Insufficient" });
   }
 
   if (!amount || amount <= 0) {
@@ -132,7 +132,6 @@ exports.signAndSend = asynchronous (function(req, res, next){
 
       const result = await(rippledServer.signAndSend(registerAddress, registerSecret, userId));
       if (result) {
-        console.log(result);
         res.json({message: result.resultCode});
       }
       else {
@@ -144,7 +143,7 @@ exports.signAndSend = asynchronous (function(req, res, next){
   const amountToSend = amount;
   // Cash register should never be empty if code reaches this point
   if ( registerBalance - amountToSend < MINIMUM_RIPPLE_ADDRESS_BALANCE ) {
-    res.json({message: "Cash Register Empty Error. Please report this to ripplePay@gmail.com"});
+    res.json({message: "bankInsufficientRippleError"});
   } else {
     sendMoney();
   } 
