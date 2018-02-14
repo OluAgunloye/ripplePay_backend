@@ -9,9 +9,8 @@ let practice1 = async(function() {
     let unlock = await(lock("my-lock"));
     setTimeout(() => {
         try {
-            console.log("hellllow");  
-            throw 'error';
-            unlock();
+            console.log("salkjfksl");
+            return true;
         } catch(e) {
             console.log(e);  
         } finally {
@@ -28,13 +27,6 @@ let practice2 = async(function() {
 
 practice1();
 practice2();
-
-if ("hello") {
-    let x = 1;
-} else {
-    let x = 3;
-}
-console.log(x);
 
 
 // const fn = async(function(){
