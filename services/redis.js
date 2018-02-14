@@ -1,5 +1,21 @@
 let await = require('asyncawait/await');
 let asynchronous = require('asyncawait/async');
+var redis = require("redis");
+let bluebird = require('bluebird');
+bluebird.promisifyAll(redis.RedisClient.prototype);
+let RedisCache;
+
+if (!RedisCache) {
+  console.log("Redis Initialized");
+  if (process.env.NODE_ENV == 'production') {
+    RedisCache = redis.createClient(process.env.REDISCLOUD_URL);
+  } else {
+    RedisCache = redis.createClient();
+  }
+  RedisCache.on("error", function (err) {
+    console.log("Error " + err);
+  });
+}
 
 function moddedKey(key, userId) {
   return `${userId}-${key}`;
@@ -53,15 +69,3 @@ exports.removeFromCache = function(key, userId) {
     console.log(response);
   })
 };
-
-// Testing Key expiry
-// let prac = asynchronous(function(){
-//   await(exports.setInCache("yo", "yo", "yoyo", 3));
-//   console.log(await(exports.getFromTheCache("yo","yo")));
-//   setTimeout(asynchronous(function() {
-//     console.log(await(exports.getFromTheCache("yo","yo")));
-//   }), 4000);
-
-// })
-
-// prac();
