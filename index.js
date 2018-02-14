@@ -10,35 +10,18 @@ const csp = require('helmet-csp');
 // require db
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
-// setup redis
-var redis = require("redis");
-let bluebird = require('bluebird');
-const rateLimit = require('./services/rateLimit');
-
-bluebird.promisifyAll(redis.RedisClient.prototype);
-
-let client;
-
-if (process.env.NODE_ENV=='production') {
-  client = redis.createClient(process.env.REDISCLOUD_URL);
-} else {
-  client = redis.createClient(); 
-}
-
-client.on("error", function (err) {
-  console.log("Error " + err);
-});
-
-global.RedisCache = client;
-
-var router = require('./services/router');
-const Token = require('./services/token');
 
 if (process.env.NODE_ENV=='production') {
   mongoose.connect(process.env.MONGO_URL, { useMongoClient: true });
 } else {
   mongoose.connect('mongodb://localhost/ripplePay', { useMongoClient: true });
 }
+
+const rateLimit = require('./services/rateLimit');
+
+var router = require('./services/router');
+const Token = require('./services/token');
+
 // Apply Middlewares
 app.use(helmet());
 

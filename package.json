@@ -37,8 +37,10 @@
     "password-validator": "^4.0.0",
     "pbkdf2": "^3.0.14",
     "redis": "^2.8.0",
+    "redis-lock": "^0.1.4",
     "ripple-lib": "^0.17.9",
     "socket.io-client": "^2.0.4",
+    "util": "^0.10.3",
     "uuid": "^2.0.2"
   },
   "repository": {
