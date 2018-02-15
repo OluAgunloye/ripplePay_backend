@@ -14,12 +14,6 @@ let cashRegisterSchema = new Schema({
   }
 });
 
-let usedWalletSchema = new Schema ({
-  wallet: {
-    type: String
-  }
-});
-
 let moneySchema = new Schema ({
   KEY_TWO: {
     type: String,
@@ -39,5 +33,4 @@ let moneySchema = new Schema ({
 });
 
 exports.CashRegister = mongoose.model('cashRegister', cashRegisterSchema);
-exports.UsedWallet = mongoose.model('usedWallet', usedWalletSchema );
 exports.Money = mongoose.model('money', moneySchema);
