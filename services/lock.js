@@ -10,7 +10,8 @@ const lock = promisify(require('redis-lock')(client));
 exports.LOCK_PREFIX = {
     USER_ID: "user-id-",
     SCREEN_NAME: "screen-name-",
-    EMAIL: "email-"
+    EMAIL: "email-",
+    BANK_WALLET: "bank-wallet-"
 }
 
 exports.lock = async(function(prefix, lockKey){

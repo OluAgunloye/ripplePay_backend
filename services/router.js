@@ -66,7 +66,7 @@ router.route('/nextTransactions')
   router.route('/delwallet')
   .post([requireAPIKey, requireAuth, WalletController.deleteWallet]);
   router.route('/dest')
-    .post(requireAPIKey, requireAuth, WalletController.receiveOnlyDesTag);
+    .post(requireAPIKey, requireAuth, WalletController.generateDestTag);
   router.route('/addrs')
     .post(requireAPIKey, requireAuth, WalletController.generateRegister);
 

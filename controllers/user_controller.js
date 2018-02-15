@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const { BankWallet } = require('../models/bankWallet');
 const { tokenForUser } = require('../services/token');
 const async = require('asyncawait/async');
 const await = require('asyncawait/await');
@@ -13,14 +14,18 @@ exports.signin = async(function(req, res) {
   const userId = user._id;
 
   let personalBalance;
+  let userWallets = [];
   if (user.personalAddress) {
     personalBalance = await(rippledServer.getBalance(user.personalAddress));
   }
+  if (user.cashRegister) {
+    userWallets = (await(BankWallet.find({ userId: userId, personalAddress: user.cashRegister }, { destTag: 1 }))).map((doc) => doc.destTag);
+  }
   res.send({
     cashRegister: user.cashRegister,
-    wallets: user.wallets,
     screenName: user.screenName,
     personalAddress: user.personalAddress,
+    wallets: userWallets,
     personalBalance: personalBalance
   });
 });

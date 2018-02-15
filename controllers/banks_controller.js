@@ -4,6 +4,7 @@ let await = require('asyncawait/await');
 const User = require('../models/user');
 const { CashRegister, Money } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
+const { BankWallet } = require('../models/bankWallet');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
 const Lock = require('../services/lock');
@@ -165,8 +166,8 @@ exports.signAndSend = asynchronous (function(req, res, next){
 exports.getTransactions = asynchronous(function (req, res, next) {
   const existingUser = req.user;
   const userId = existingUser._id;
-  let userWallets = existingUser.wallets;
   const userAddress = existingUser.cashRegister;
+  let userWallets = (await(BankWallet.find({ userId: userId, address: userAddress }, { destTag: 1 }))).map((doc) => doc.destTag);
   let userTransactions = [];
 
   if (!userId) {

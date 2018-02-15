@@ -5,6 +5,7 @@ const async = require('async');
 
 const { addresses, bank } = require('../configs/addresses');
 const { CashRegister, Money } = require('../models/moneyStorage');
+const { BankWallet } = require('../models/bankWallet');
 const { ChangellyTransaction } = require('../models/changellyTransaction');
 const { Transaction } = require('../models/transaction');
 
@@ -17,11 +18,10 @@ else if (process.env.NODE_ENV == "seed-production") {
   mongoose.connect(require('../configs/config').MONGO_URL, { useMongoClient: true });
 }
 else {
-  mongoose.connect('mongodb://localhost:ripplePay/ripplePay');
+  mongoose.connect('mongodb://localhost:ripplePay/ripplePay', { useMongoClient: true });
 }
 
 mongoose.connection.once('connected', () => {
-    mongoose.connection.db.dropCollection('vaults');
     mongoose.connection.db.dropCollection('cashregisters');
     mongoose.connection.db.dropCollection('money');
     mongoose.connection.db.collection("cashregisters").createIndex({address: 1}, {background: true});
@@ -30,7 +30,8 @@ mongoose.connection.once('connected', () => {
     mongoose.connection.db.collection("changellytransactions").createIndex({ changellyTxnId: 1 }, {background: true});
     mongoose.connection.db.collection("users").createIndex({screenName: 1}, {background: true});
     mongoose.connection.db.collection("users").createIndex({email: 1}, {background: true});
-    mongoose.connection.db.collection("usedwallets").createIndex({wallet: 1}, {background: true});
+    mongoose.connection.db.collection("bankwallets").createIndex({userId: 1, address: 1}, {background: true});
+    mongoose.connection.db.collection("bankwallets").createIndex({bankWalletId: 1}, {background: true});
 });
 const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
@@ -70,5 +71,9 @@ changellyTransaction.save(function(err){
 });
 let transaction = new Transaction;
 transaction.save(function (err) {
+
+});
+let bankWallet = new BankWallet;
+bankWallet.save(function (err) {
 
 });
