@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const UserMethods = require('../models/methods/user');
 const { BankWallet } = require('../models/bankWallet');
 const { tokenForUser } = require('../services/token');
 const async = require('asyncawait/async');
@@ -19,7 +20,7 @@ exports.signin = async(function(req, res) {
     personalBalance = await(rippledServer.getBalance(user.personalAddress));
   }
   if (user.cashRegister) {
-    userWallets = (await(BankWallet.find({ userId: userId, personalAddress: user.cashRegister }, { destTag: 1 }))).map((doc) => doc.destTag);
+    userWallets = await(UserMethods.getWallets(userId, user.cashRegister));
   }
   res.send({
     cashRegister: user.cashRegister,
@@ -105,13 +106,12 @@ exports.changePassword = async(function(req, res, next) {
   }));
 });
 
-exports.search = function (req, res, next) {
+exports.search = async(function (req, res, next) {
   const currentUser = req.user;
   let query = req.query;
   let searchKey = Object.keys(query)[0];
-  let reg = new RegExp(`^${query[searchKey]}\\w*$` , 'i');
-  User.find({ 'screenName': { '$regex': reg, '$ne': currentUser.screenName } }, function(err, users) {
-    if (err) { return next(err); }
-    res.json({search: users.map((user) => user.screenName)});
-  });
-};
+  let searchString = query[searchKey];
+
+  const screenNames = await(UserMethods.searchUser(searchString, currentUser.screenName));
+  res.json({ search: screenNames });
+});
