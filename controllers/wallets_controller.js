@@ -1,5 +1,6 @@
 let _ = require('lodash');
 const User = require('../models/user');
+const UserMethods = require('../models/methods/user');
 const { CashRegister } = require('../models/moneyStorage');
 const { BankWallet } = require('../models/bankWallet');
 const Lock = require('../services/lock');
@@ -24,6 +25,7 @@ exports.generateDestTag = asynchronous(function(req, res, next){
   if (!cashRegister) {
     return res.json({ message: "Error Occurred"});
   }
+  // Make a validation that checks if the user has 5 wallets already
   const userWallets = await (BankWallet.find({ userId: userId, address: user.cashRegister }, { destTag: 1 }));
   if (userWallets.length === 5) {
     return res.json({ message: "maximum 5 wallets" });
@@ -63,8 +65,9 @@ exports.deleteWallet = asynchronous(function(req, res, next){
   const bankWalletId = createBankWalletId(user.cashRegister, desTag);
 
   const unlockBankWallet = await(Lock.lock(Lock.LOCK_PREFIX.BANK_WALLET, bankWalletId));
+  
   try {
-    await (BankWallet.findOneAndRemove({ bankWalletId }));
+    await(UserMethods.removeWallet(bankWalletId));
     res.json({});
   } 
   finally {

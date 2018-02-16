@@ -4,6 +4,7 @@ const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 const { Money } = require('../models/moneyStorage');
 const User = require('../models/user');
+const UserMethods = require('../models/methods/user');
 
 exports.generatePersonalAddress = asynchronous(function (req, res, next) {
     const personalAddressObject = await(rippledServer.generateAddress());
@@ -103,12 +104,13 @@ exports.prepareTransactionPersonalToBank = asynchronous(function (req, res, next
     if (amount > sender.balance) {
         return res.json({ message: "Balance Insufficient" });
     }
-    const receiver = await(User.findOne({ screenName: toScreenName }));
-    if (!receiver.cashRegister || receiver.wallets.length === 0) {
+    const receiver = await(UserMethods.findByScreenName(toScreenName));
+    const receiverWallets = await(UserMethods.getWallets(receiver._id, receiver.cashRegister));
+    if (!receiver.cashRegister || receiverWallets.length === 0) {
         return res.json({ message: "Receiver has no bank wallet!"});
     }
 
-    const toDesTag = receiver.wallets[receiver.wallets.length - 1];
+    const toDesTag = receiverWallets[receiverWallets.length - 1];
     const toAddress = receiver.cashRegister;
     const txnInfo = await(rippledServer.prepareTransaction(fromAddress, toAddress, amount, null, toDesTag, senderId));
     const fee = parseFloat(txnInfo.instructions.fee);

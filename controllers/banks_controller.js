@@ -2,9 +2,9 @@ const async = require('async');
 let asynchronous = require('asyncawait/async');
 let await = require('asyncawait/await');
 const User = require('../models/user');
+const UserMethods = require('../models/methods/user');
 const { CashRegister, Money } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
-const { BankWallet } = require('../models/bankWallet');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
 const Lock = require('../services/lock');
@@ -21,14 +21,13 @@ if (process.env.NODE_ENV=='production') {
   encryptedBank = require('../configs/addresses').encryptedBank;
 }
 
-const TXN_LIMIT = 10;
 const MINIMUM_RIPPLE_ADDRESS_BALANCE = 20;
 
 exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
   let sender = req.user;
   let senderId = sender._id;
-  let receiver = await (User.findOne({ screenName: receiverScreenName }));
+  let receiver = await (UserMethods.findByScreenName(receiverScreenName));
   let receiverId = receiver._id;
 
   if (!receiver || !sender || !receiverId || !senderId) {
@@ -63,8 +62,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
         otherParty: sender.screenName
       });
 
-      let updatedSender = await(User.findOneAndUpdate({ _id: senderId }, { '$inc': { balance: -amount } }, { returnNewDocument: true }));
-      await (User.findOneAndUpdate({ _id: receiverId }, { '$inc': { balance: amount } }));
+      let updatedSender = await(UserMethods.decreaseBalance(senderId, amount));
+      let updatedReceiver = await(UserMethods.increaseBalance(receiverId, amount));
   
       senderTransaction.save(function(err) {
         if (err) {
@@ -166,15 +165,15 @@ exports.signAndSend = asynchronous (function(req, res, next){
 exports.getTransactions = asynchronous(function (req, res, next) {
   const existingUser = req.user;
   const userId = existingUser._id;
-  const userAddress = existingUser.cashRegister;
-  let userWallets = (await(BankWallet.find({ userId: userId, address: userAddress }, { destTag: 1 }))).map((doc) => doc.destTag);
+  const cashRegister = existingUser.cashRegister;
+  let userWallets = await(UserMethods.getWallets(userId, cashRegister));
   let userTransactions = [];
 
   if (!userId) {
     return next("Fatal error");
   }
   if (!existingUser.cashRegister) {
-    userTransactions = await(Transaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
+    userTransactions = await(UserMethods.getTransactions(userId));
     return res.json({
       transactions: userTransactions,
       balance: existingUser.balance
@@ -206,7 +205,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         const destTagIdx = userWallets.indexOf(destTag);
         const sourceTagIdx = userWallets.indexOf(sourceTag);
   
-        if ( (destTagIdx !== -1 && destAddress === userAddress) || (sourceTagIdx !== -1 && sourceAddress === userAddress) ) {
+        if ( (destTagIdx !== -1 && destAddress === cashRegister) || (sourceTagIdx !== -1 && sourceAddress === cashRegister) ) {
           if ( setLastTransaction )
           {
             userChanges.lastTransactionId = currTxn.id;
@@ -219,7 +218,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
   
           let counterParty, tag, counterPartyTag;
   
-          if (destAddress === userAddress) {
+          if (destAddress === cashRegister) {
             counterParty = sourceAddress;
             counterPartyTag = sourceTag;
             tag = destTag;
@@ -229,7 +228,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
             tag = sourceTag;
           }
   
-          let balanceChange = parseFloat(currTxn.outcome.balanceChanges[userAddress][0].value);
+          let balanceChange = parseFloat(currTxn.outcome.balanceChanges[cashRegister][0].value);
   
           if ( balanceChange < 0 && currTxn.outcome.result === "tesSUCCESS")
           {
@@ -279,7 +278,7 @@ exports.getTransactions = asynchronous(function (req, res, next) {
           cb(true)
         }
       }), function(error, resp) {
-        userTransactions = await(Transaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
+        userTransactions = await(UserMethods.getTransactions(userId));
         let updatedUser = await(
           User.findOneAndUpdate(
             {_id: existingUser._id}, 
@@ -303,9 +302,9 @@ exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const user = req.user;
   const userId = user._id;
   const maxDate = req.query[0];
-  let nextTransactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT+1));
-  // remove the first since that will have already been counted.
-  nextTransactions = nextTransactions.slice(1);
-  const shouldLoadMoreTransactions = nextTransactions.length >= TXN_LIMIT ? true : false;
+
+  let nextTransactions = await(UserMethods.getTransactionsBeforeDate(maxDate));
+
+  const shouldLoadMoreTransactions = nextTransactions.length >= Config.TXN_LIMIT ? true : false;
   res.json({ nextTransactions, shouldLoadMoreTransactions });
 });

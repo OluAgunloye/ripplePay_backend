@@ -1,15 +1,15 @@
 let asynchronous = require('asyncawait/async');
+const UserMethods = require('../models/methods/user');
 let await = require('asyncawait/await');
 const async = require('async');
 let Changelly = require('../services/changelly');
+const Config = require('../config_enums');
 let { ChangellyTransaction } = require('../models/changellyTransaction');
 const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
 // let { sampleCoins } = require('../references/testData');
 
 let apiKey, apiSecret;
-
-const TXN_LIMIT = 10;
 
 if (process.env.NODE_ENV === 'production') {
     apiKey = process.env.CHANGELLY_APIKEY;
@@ -88,18 +88,16 @@ exports.createChangellyTransaction = function (req, res, next) {
 exports.getChangellyTransactions = asynchronous(function (req, res, next) {
     let existingUser = req.user;
     let userId = existingUser._id;
-    const changellyTransactions = await(ChangellyTransaction.find({ userId }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT));
+    const changellyTransactions = await(UserMethods.getChangellyTransactions(userId));
     res.json({ changellyTransactions });
 })
 
 exports.loadNextChangellyTransactions = asynchronous(function (req, res, next) {
     const user = req.user;
     const userId = user._id;
-    const minDate = req.query[0];
-    let nextChangellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': minDate } }, { userId: 0 }).sort({ date: -1 }).limit(TXN_LIMIT + 1));
-    // remove the first transaction because that will already have been counted
-    nextChangellyTransactions = nextChangellyTransactions.slice(1);
-    const shouldLoadMoreChangellyTransactions = nextChangellyTransactions.length >= TXN_LIMIT ? true : false;
+    const maxDate = req.query[0];
+    let nextChangellyTransactions = await(UserMethods.getChangellyTransactionsBeforeDate(maxDate));
+    const shouldLoadMoreChangellyTransactions = nextChangellyTransactions.length >= Config.TXN_LIMIT ? true : false;
     res.json({ nextChangellyTransactions, shouldLoadMoreChangellyTransactions });
 });
 
