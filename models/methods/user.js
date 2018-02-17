@@ -16,15 +16,15 @@ exports.getChangellyTransactions = async(function (userId) {
     return userChangellyTransactions;
 });
 
-exports.getTransactionsBeforeDate = async(function(maxDate) {
-    const transactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(Config.TXN_LIMIT+1));
+exports.getTransactionsBeforeDate = async(function(userId, maxDate) {
+    let transactions = await(Transaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(Config.TXN_LIMIT+1));
     // remove the first since that will have already been counted.
     transactions = transactions.slice(1);
     return transactions;
 });
 
-exports.getChangellyTransactionsBeforeDate = async(function(maxDate) {
-    const changellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(Config.TXN_LIMIT+1));
+exports.getChangellyTransactionsBeforeDate = async(function(userId, maxDate) {
+    let changellyTransactions = await(ChangellyTransaction.find({ userId: userId, date: { '$lte': maxDate } }, { userId: 0 }).sort({ date: -1 }).limit(Config.TXN_LIMIT+1));
     // remove the first since that will have already been counted.
     changellyTransactions = changellyTransactions.slice(1);
     return changellyTransactions;
@@ -37,13 +37,11 @@ exports.getWallets = async(function(userId, cashRegister) {
 
 
 exports.increaseBalance = async(function(userId, amount) {
-    const updatedUser = await(User.findOneAndUpdate({ _id: userId }, { '$inc': { balance: amount } }, { returnNewDocument: true }));
-    return updatedUser;
+    await(User.findOneAndUpdate({ _id: userId }, { '$inc': { balance: amount } }));
 });
 
 exports.decreaseBalance = async(function(userId, amount) {
-    const updatedUser = await(User.findOneAndUpdate({ _id: userId }, { '$inc': { balance: -amount } }, { returnNewDocument: true }));
-    return updatedUser;
+    await(User.findOneAndUpdate({ _id: userId }, { '$inc': { balance: -amount } }));
 });
 
 exports.findByScreenName = async(function(screenName) {

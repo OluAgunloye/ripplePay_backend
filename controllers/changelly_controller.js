@@ -96,7 +96,7 @@ exports.loadNextChangellyTransactions = asynchronous(function (req, res, next) {
     const user = req.user;
     const userId = user._id;
     const maxDate = req.query[0];
-    let nextChangellyTransactions = await(UserMethods.getChangellyTransactionsBeforeDate(maxDate));
+    let nextChangellyTransactions = await(UserMethods.getChangellyTransactionsBeforeDate(userId, maxDate));
     const shouldLoadMoreChangellyTransactions = nextChangellyTransactions.length >= Config.TXN_LIMIT ? true : false;
     res.json({ nextChangellyTransactions, shouldLoadMoreChangellyTransactions });
 });
