@@ -5,13 +5,17 @@ const rippledServer = new RippledServer();
 const { Money } = require('../models/moneyStorage');
 const User = require('../models/user');
 const UserMethods = require('../models/methods/user');
+const PersonalWalletValidation = require('../validations/personal_wallets_validation');
 
 exports.generatePersonalAddress = asynchronous(function (req, res, next) {
-    const personalAddressObject = await(rippledServer.generateAddress());
     const user = req.user;
-    if (user.personalAddress) {
-        return res.json({ message: "user already has a personal address"})
+
+    const validationError = PersonalWalletValidation.generatePersonalAddressValidations(user);
+    if (validationError) {
+        return res.status(422).json({ error: validationError });
     }
+
+    const personalAddressObject = await(rippledServer.generateAddress());
     user.personalAddress = personalAddressObject.address;
     user.save(function (err) {
         if (err) {
@@ -28,9 +32,12 @@ exports.getPersonalAddressTransactions = asynchronous(function (req, res, next) 
         return res.json({ message: "user does not have a personal address!" });
     }
     const personalAddressBalance = await(rippledServer.getBalance(user.personalAddress));
-    if (personalAddressBalance === 0) {
-        return res.json({message: "New XRP wallets require 20 XRP!"});
+
+    const validationError = PersonalWalletValidation.getPersonalAddressTransactionsValidations(limit, personalAddressBalance);
+    if (validationError) {
+        return res.status(422).json({ error: validationError });
     }
+
     const personalAddressTransactions = await(rippledServer.getTransactions(user.personalAddress, limit));
     res.json({ 
         personalAddress: user.personalAddress, 
@@ -41,9 +48,12 @@ exports.getPersonalAddressTransactions = asynchronous(function (req, res, next) 
 
 exports.removePersonalAddress = asynchronous(function (req, res, next) {
     const user = req.user;
-    if (!user.personalAddress) {
-        res.json({ message: "user already has no personal address" });
+
+    const validationError = PersonalWalletValidation.removePersonalAddressValidations(user);
+    if (validationError) {
+        return res.status(422).json({ error: validationError });
     }
+
     user.personalAddress = null;
     user.save(function (err) {
         if (err) {
@@ -56,26 +66,32 @@ exports.removePersonalAddress = asynchronous(function (req, res, next) {
 exports.preparePaymentWithPersonalAddress = asynchronous(function (req, res, next) {
     const user = req.user;
     const userId = user._id;
-    let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
-    amount = parseFloat(amount);
-    if (!amount || amount <= 0) {
-        return res.json({ message: "Cant send 0 or less XRP" });
+    let { amount, fromAddress, toAddress, toDesTag } = req.body;
+    const personalBalance = await(rippledServer.getBalance(fromAddress));
+    const validationErrors = PersonalWalletValidation.preparePaymentWithPersonalAddressValidations(amount, fromAddress, toAddress, toDesTag, personalBalance);
+    if (validationErrors.length > 0) {
+        return res.status(422).json({ error: validationErrors })
     }
 
-    const txnInfo = await(rippledServer.prepareTransaction(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
+    amount = parseFloat(amount);
+
+    const txnInfo = await(rippledServer.prepareTransaction(fromAddress, toAddress, amount, null, toDesTag, userId));
     const fee = parseFloat(txnInfo.instructions.fee);
     return res.json({ fee });
 });
 
 exports.sendPaymentWithPersonalAddress = asynchronous(function (req, res, next) {
     let { fromAddress, secret, amount } = req.body;
-    amount = parseFloat(amount);
     const existingUser = req.user;
     const userId = existingUser._id;
+    const registerAddress = fromAddress;
 
-    if (!amount || amount <= 0) {
-        return res.json({ message: "Cant send 0 or less XRP" });
+    const validationErrors = PersonalWalletValidation.sendPaymentWithPersonalAddressValidations(amount, registerAddress, secret);
+    if (validationErrors.length > 0) {
+        return res.status(422).json({ error: validationErrors })
     }
+
+    amount = parseFloat(amount);
     // Do a validation check here to check if the person has the amount + 0.02 fee to pay and if not give error
     const result = await(rippledServer.signAndSend(fromAddress, secret, userId));
     
@@ -94,21 +110,21 @@ exports.sendPaymentWithPersonalAddress = asynchronous(function (req, res, next) 
 
 exports.prepareTransactionPersonalToBank = asynchronous(function (req, res, next) {
     let { amount, fromAddress, toScreenName } = req.body;
-    amount = parseFloat(amount);
     const sender = req.user;
     const senderId = sender._id;
     
-    if (!amount || amount <= 0) {
-        return res.json({ message: "Cant send 0 or less XRP" });
-    }
-    if (amount > sender.balance) {
-        return res.json({ message: "Balance Insufficient" });
-    }
     const receiver = await(UserMethods.findByScreenName(toScreenName));
-    const receiverWallets = await(UserMethods.getWallets(receiver._id, receiver.cashRegister));
-    if (!receiver.cashRegister || receiverWallets.length === 0) {
-        return res.json({ message: "Receiver has no bank wallet!"});
+    if (!receiver) {
+      return res.status(422).json({ error: 'no existing user with this screen name'});  
     }
+    const receiverWallets = await(UserMethods.getWallets(receiver._id, receiver.cashRegister));
+
+    const validationErrors = PersonalWalletValidation.prepareTransactionPersonalToBankValidations(toScreenName, fromAddress, amount, sender, receiver, receiverWallets);
+    if (validationErrors.length > 0) {
+        return res.status(422).json({ error: validationErrors })
+    }
+
+    amount = parseFloat(amount);
 
     const toDesTag = receiverWallets[receiverWallets.length - 1];
     const toAddress = receiver.cashRegister;
