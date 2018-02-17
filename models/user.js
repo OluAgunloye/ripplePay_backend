@@ -3,21 +3,21 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
 const Config = require('../config_enums');
 
-var validateEmail = (email) => {
+const validateEmail = (email) => {
   if (email.length > Config.MAX_EMAIL_LENGTH) {
     return false;
   }
   return (/\S+@\S+\.\S+/).test(email);
 };
 
-var validateScreenName = (screenName) => {
+const validateScreenName = (screenName) => {
   if (screenName.length > Config.MAX_SCREEN_NAME_LENGTH) {
     return false;
   }
   return (/^[a-zA-Z][0-9a-zA-Z]+$/).test(screenName);
 };
 
-var userSchema = new Schema({
+const userSchema = new Schema({
   email: {
     type: String,
     unique: true,
@@ -53,7 +53,7 @@ var userSchema = new Schema({
 });
 
 userSchema.pre('save', function(next) {
-  var user = this;
+  let user = this;
   if (user.isNew || user.isModified('password')) {
     bcrypt.genSalt(10, function(err, salt) {
       if (err) { return next(err); }

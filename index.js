@@ -1,6 +1,6 @@
 // require express
 const express = require('express');
-var app = express();
+const app = express();
 // require middleware
 const mung = require('express-mung');
 const morgan = require('morgan');
@@ -19,7 +19,7 @@ if (process.env.NODE_ENV=='production') {
 
 const rateLimit = require('./services/rateLimit');
 
-var router = require('./services/router');
+const router = require('./services/router');
 const Token = require('./services/token');
 
 // Apply Middlewares
@@ -48,7 +48,7 @@ app.use('/v1', router);
 // Disabling etag will mess up caching mechanisms
 // app.disable('etag');
 
-var PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 console.log('Listening on', PORT);
 app.listen(PORT);

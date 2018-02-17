@@ -1,6 +1,6 @@
 let await = require('asyncawait/await');
 let asynchronous = require('asyncawait/async');
-var redis = require("redis");
+const redis = require("redis");
 let bluebird = require('bluebird');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 let RedisCache;

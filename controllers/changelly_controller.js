@@ -21,7 +21,7 @@ else {
 }
 
 // code from https://github.com/changelly/api-changelly MIT licence.
-var changelly = new Changelly(
+const changelly = new Changelly(
     apiKey,
     apiSecret
 );
