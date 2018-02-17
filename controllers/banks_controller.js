@@ -7,6 +7,7 @@ const { CashRegister, Money } = require('../models/moneyStorage');
 const { Transaction } = require('../models/transaction');
 const Encryption = require('../services/encryption');
 const Decryption = require('../services/decryption');
+const BanksValidation = require('../validations/banks_validation');
 const Lock = require('../services/lock');
 const Config = require('../config_enums');
 const RippledServer = require('../services/rippleAPI');
@@ -21,26 +22,19 @@ if (process.env.NODE_ENV=='production') {
   encryptedBank = require('../configs/addresses').encryptedBank;
 }
 
-const MINIMUM_RIPPLE_ADDRESS_BALANCE = 20;
-
 exports.inBankSend = asynchronous(function(req, res, next){
   let { receiverScreenName, amount } = req.body;
   let sender = req.user;
-  let senderId = sender._id;
   let receiver = await (UserMethods.findByScreenName(receiverScreenName));
-  let receiverId = receiver._id;
 
-  if (!receiver || !sender || !receiverId || !senderId) {
-    return res.json({ message: "Payment Unsuccessful" });
+  const validationErrors = BanksValidation.inBankSendValidations(receiverScreenName, amount, sender, receiver);
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors });
   }
-
+  
+  const senderId = sender._id;
+  const receiverId = receiver._id;
   amount = parseFloat(amount);
-  if (amount && amount > sender.balance) {
-    return res.json({ message: "Balance Insufficient", balance: sender.balance });
-  }
-  if (!amount || amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP" })
-  }
 
   const unlockSender = await(Lock.lock(Lock.LOCK_PREFIX.USER_ID, senderId));
   const unlockReceiver = await(Lock.lock(Lock.LOCK_PREFIX.USER_ID, receiverId));
@@ -62,8 +56,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
         otherParty: sender.screenName
       });
 
-      let updatedSender = await(UserMethods.decreaseBalance(senderId, amount));
-      let updatedReceiver = await(UserMethods.increaseBalance(receiverId, amount));
+      await(UserMethods.decreaseBalance(senderId, amount));
+      await(UserMethods.increaseBalance(receiverId, amount));
   
       senderTransaction.save(function(err) {
         if (err) {
@@ -75,8 +69,8 @@ exports.inBankSend = asynchronous(function(req, res, next){
           console.log(err, "saving receiver transaction failed!");
         }
       });
-      
-      res.json({message: "Payment was Successful", balance: updatedSender.balance});
+
+      res.json({message: "Payment was Successful", balance: sender.balance - amount});
       
   }
   finally {
@@ -88,26 +82,20 @@ exports.inBankSend = asynchronous(function(req, res, next){
 
 exports.preparePayment = asynchronous(function(req, res, next) {
   let { amount, fromAddress, toAddress, sourceTag, toDesTag } = req.body;
-  amount = parseFloat(amount);
+  
   let existingUser = req.user;
   let userId = existingUser._id;
 
-  if (amount > existingUser.balance) {
-    return res.json({ message: "User Balance Insufficient" });
-  }
-
-  if (!amount || amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP"});
-  }
-
   const masterKey = await(Decryption.getMasterKey());
   const ripplePayAddresses = Decryption.decryptAllAddresses(masterKey, encryptedAddresses);
+  
+  const validationErrors = BanksValidation.preparePaymentValidations(amount, fromAddress, toAddress, sourceTag, toDesTag, existingUser, ripplePayAddresses);
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors })
+  }
 
-  // LEAVE THIS OUT TO ALLOW FOR TESTING
-  // if (ripplePayAddresses.includes(toAddress)) {
-  //   return res.json({ message: "Send with no fee to a ripplePay user!"});
-  // }
-
+  amount = parseFloat(amount);
+  
   const txnInfo = await(rippledServer.prepareTransaction(fromAddress, toAddress, amount, sourceTag, toDesTag, userId));
   const fee = parseFloat(txnInfo.instructions.fee);
   return res.json({ fee });
@@ -115,47 +103,30 @@ exports.preparePayment = asynchronous(function(req, res, next) {
 
 exports.signAndSend = asynchronous (function(req, res, next){
   let { fromAddress, amount } = req.body;
-  amount = parseFloat(amount);
   const existingUser = req.user;
   const userId = existingUser._id;
-
-  if (!amount || amount <= 0) {
-    return res.json({ message: "Cant send 0 or less XRP" });
-  }
-
-  if (amount > existingUser.balance) {
-    res.json({ message: "Balance Insufficient" });
-    return;
-  }
-
   const registerAddress = fromAddress;
   const registerBalance = await(rippledServer.getBalance(registerAddress));
 
+  const validationErrors = BanksValidation.signAndSendValidations(amount, registerAddress, registerBalance, existingUser);
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors })
+  }
+
+  amount = parseFloat(amount);
   const masterKey = await(Decryption.getMasterKey());
   
-  let sendMoney = asynchronous(function(){
+  const encryptedRegisterAddress = Encryption.encrypt(masterKey, registerAddress);
+  const encryptedRegisterSecret = encryptedAddresses[encryptedRegisterAddress];
+  const registerSecret = Decryption.decrypt(masterKey, encryptedRegisterSecret);
 
-      const encryptedRegisterAddress = Encryption.encrypt(masterKey, registerAddress);
-      const encryptedRegisterSecret = encryptedAddresses[encryptedRegisterAddress];
-      const registerSecret = Decryption.decrypt(masterKey, encryptedRegisterSecret);
-
-      const result = await(rippledServer.signAndSend(registerAddress, registerSecret, userId));
-      if (result) {
-        res.json({message: result.resultCode});
-      }
-      else {
-        res.json({message: "Transaction Failed"});
-      }
-
-  })
-
-  const amountToSend = amount;
-  // Cash register should never be empty if code reaches this point
-  if ( registerBalance - amountToSend < MINIMUM_RIPPLE_ADDRESS_BALANCE ) {
-    res.json({message: "bankInsufficientRippleError"});
-  } else {
-    sendMoney();
-  } 
+  const result = await(rippledServer.signAndSend(registerAddress, registerSecret, userId));
+  if (result) {
+    res.json({message: result.resultCode});
+  }
+  else {
+    res.json({message: "Transaction Failed"});
+  }
 })
 
 // Address and Destination/Source Tag used to get user's transactions and balance
@@ -282,13 +253,12 @@ exports.getTransactions = asynchronous(function (req, res, next) {
         let updatedUser = await(
           User.findOneAndUpdate(
             {_id: existingUser._id}, 
-            {'$set': { lastTransactionId: userChanges.lastTransactionId }, '$inc': { balance: userChanges.balance }},
-            { returnNewDocument: true } 
+            {'$set': { lastTransactionId: userChanges.lastTransactionId }, '$inc': { balance: userChanges.balance }}
           )
         );
         res.json({
           transactions: userTransactions,
-          balance: updatedUser.balance
+          balance: existingUser.balance + userChanges.balance
         });
       });
   }
@@ -303,7 +273,7 @@ exports.loadNextTransactions = asynchronous(function(req, res, next) {
   const userId = user._id;
   const maxDate = req.query[0];
 
-  let nextTransactions = await(UserMethods.getTransactionsBeforeDate(maxDate));
+  let nextTransactions = await(UserMethods.getTransactionsBeforeDate(userId, maxDate));
 
   const shouldLoadMoreTransactions = nextTransactions.length >= Config.TXN_LIMIT ? true : false;
   res.json({ nextTransactions, shouldLoadMoreTransactions });

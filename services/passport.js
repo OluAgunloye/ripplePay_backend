@@ -2,6 +2,7 @@ const passport = require('passport');
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const JwtStrategy = require('passport-jwt').Strategy;
 const LocalStrategy = require('passport-local');
+const UserValidation = require('../validations/user_validation');
 
 const User = require('../models/user');
 let secret;
@@ -16,14 +17,18 @@ let localOptions = {
 };
 
 let localStrategy = new LocalStrategy(localOptions, function(email, password, done) {
-  // Verify this username and password
+
+  const validationErrors = UserValidation.signinValidations(email, password);
+  if (validationErrors.length > 0) {
+    return done("Wrong email/password combination");
+  }
+
   User.findOne({email: email.toLowerCase()}, function(err, user) {
     if (err) { return done(err); }
     if (!user) { return done("Wrong email/password combination"); }
     user.comparePassword(password, function(error, isMatch) {
       if (error) { return done(error); }
       if (!isMatch) { return done("Wrong email/password combination"); }
-      // after this is done, returning the following will return the user object to
       return done(null, user);
     });
   });

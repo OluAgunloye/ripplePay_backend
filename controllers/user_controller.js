@@ -6,6 +6,7 @@ const async = require('asyncawait/async');
 const await = require('asyncawait/await');
 const Redis = require('../services/redis');
 const passwordValidator = require('../services/passwordValidator');
+const UserValidation = require('../validations/user_validation');
 const Lock = require('../services/lock');
 const RippledServer = require('../services/rippleAPI');
 const rippledServer = new RippledServer();
@@ -34,6 +35,12 @@ exports.signin = async(function(req, res) {
 exports.comparePassword = function(req, res, next) {
   const user = req.user;
   const { password } = req.body;
+
+  const validationErrors = UserValidation.comparePasswordValidations(password);
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors })
+  }
+
   user.comparePassword(password, function (error, isMatch) {
     if (error) { return next(error); }
     if (!isMatch) { 
@@ -45,20 +52,13 @@ exports.comparePassword = function(req, res, next) {
 };
 // add all the validations for email, password, screenName later.
 exports.signup = async(function(req, res, next) {
-  let email = req.body.email;
-  let password = req.body.password;
-  let screenName = req.body.screenName;
+  let { email, password, screenName } = req.body;
+
+  const validationErrors = await(UserValidation.signupValidations(email, password, screenName));
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors });
+  }
   
-  let passwordValidationFailures = await(passwordValidator.validatePassword(password));
-
-  if (passwordValidationFailures) {
-    return res.status(422).json({ error: passwordValidationFailures });
-  }
-
-  if (!email || !password || !screenName) {
-    return res.status(422).json({error: "You must provide an email, password & screen name"});
-  }
-
   const unlockEmail = await(Lock.lock(Lock.LOCK_PREFIX.EMAIL, email));
   const unlockScreenName = await(Lock.lock(Lock.LOCK_PREFIX.SCREEN_NAME, screenName));
 
@@ -86,6 +86,12 @@ exports.signup = async(function(req, res, next) {
 exports.changePassword = async(function(req, res, next) {
   const { oldPassword, newPassword } = req.body;
   const user = req.user;
+  
+  const validationErrors = await(UserValidation.changePasswordValidations(oldPassword, newPassword));
+  if (validationErrors.length > 0) {
+    return res.status(422).json({ error: validationErrors });
+  }
+
   user.comparePassword(oldPassword, async(function (error, isMatch) {
     if (error) { return next(error); }
     if (!isMatch) {
@@ -111,6 +117,14 @@ exports.search = async(function (req, res, next) {
   let query = req.query;
   let searchKey = Object.keys(query)[0];
   let searchString = query[searchKey];
+  let validationErrors;
+
+  if (searchString !== undefined) {
+    validationErrors = UserValidation.searchValidations(searchString);
+    if (validationErrors.length > 0) {
+      return res.status(422).json({ error: validationErrors });
+    }
+  }
 
   const screenNames = await(UserMethods.searchUser(searchString, currentUser.screenName));
   res.json({ search: screenNames });

@@ -1,5 +1,7 @@
 exports.ripplePayFee = 0.02;
 
+exports.MIN_XRP_PER_WALLET = 20;
+
 exports.MIN_DEST_TAG = 1;
 exports.MAX_DEST_TAG = 4294967294;
 
