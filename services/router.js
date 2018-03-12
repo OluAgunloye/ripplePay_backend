@@ -35,7 +35,7 @@ function forceLogout(req, res, next) {
 }
 
 router.route('/forceLogout')
-  .get(forceLogout)
+  .get(forceLogout);
 // Auth Routes`
 // -----------------------------------------------------------------------------
 // USER CONTROLLER
