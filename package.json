@@ -41,6 +41,7 @@
     "ripple-lib": "^0.17.9",
     "socket.io-client": "^2.0.4",
     "util": "^0.10.3",
+    "util.promisify": "^1.0.0",
     "uuid": "^2.0.2"
   },
   "repository": {

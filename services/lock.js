@@ -2,8 +2,10 @@ const { RedisCache } = require('./redis');
 
 const async = require('asyncawait/async');
 const await = require('asyncawait/await');
-const Promise = require('bluebird');
-const lock = Promise.promisify(require('redis-lock')(RedisCache));
+
+const util = require('util');
+require('util.promisify').shim();
+const lock = util.promisify(require('redis-lock')(RedisCache));
 // 
 exports.LOCK_PREFIX = {
     USER_ID: "user-id-",
