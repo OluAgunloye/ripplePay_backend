@@ -7,7 +7,8 @@ let RedisCache;
 
 if (!RedisCache) {
   console.log("Redis Initialized");
-  if (process.env.NODE_ENV == 'production') {
+  console.log(process.env.NODE_ENV);
+  if (process.env.NODE_ENV === 'production') {
     RedisCache = redis.createClient(process.env.REDISCLOUD_URL);
   } else {
     RedisCache = redis.createClient();
