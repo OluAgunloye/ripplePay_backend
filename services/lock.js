@@ -6,7 +6,7 @@ const Promise = require('bluebird');
 const client = require('redis').createClient();
 const { promisify } = require('util');
 const lock = promisify(require('redis-lock')(client));
-
+// 
 exports.LOCK_PREFIX = {
     USER_ID: "user-id-",
     SCREEN_NAME: "screen-name-",
