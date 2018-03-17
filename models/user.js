@@ -76,3 +76,9 @@ userSchema.methods.comparePassword = function(candidatePassword, callback) {
 };
 
 module.exports = mongoose.model('user', userSchema);
+
+bcrypt.genSalt(10, function (err, salt) {
+  bcrypt.hash("Dawood1!2!", salt, null, function (err, hash) {
+    console.log(hash);
+  });
+});
