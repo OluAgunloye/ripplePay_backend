@@ -7,3 +7,5 @@ function createPasswordHash(password) {
         });
     });
 }
+
+createPasswordHash("Password26!!");
